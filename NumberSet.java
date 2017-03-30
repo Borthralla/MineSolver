@@ -43,16 +43,35 @@ public class NumberSet {
         boolean allsearched = true;
         int lowestNumPossibilities = 10000;
         Tile priority = members.get(0);
+        List<Assignment> forcedAssignments = new ArrayList<Assignment>();
+        List<Tile> forcedNumbers = new ArrayList<Tile>();
         for (Tile num : members) {
             if (num.searched) {
                 continue;
             }
-            allsearched = false;
-            int numpossibilities = num.allPossibilities().size();
+
+            List<List<Assignment>> allPossibilities = num.allPossibilities();
+            int numpossibilities = allPossibilities.size();
             if (numpossibilities == 0) {
-                numsearched--;
+                //numsearched--;
+                for (Assignment assignment : forcedAssignments) {
+                    assignment.tileset.unassign();
+                }
+                for (Tile forced : forcedNumbers) {
+                    forced.searched = false;
+                }
                 return;
             }
+            if (numpossibilities == 1) {
+                for (Assignment assignment : allPossibilities.get(0)) {
+                    forcedAssignments.add(assignment);
+                    forcedNumbers.add(num);
+                    assignment.tileset.assign(assignment.numbombs);
+                }
+                num.searched = true;
+                continue;
+            }
+            allsearched = false;
             if (numpossibilities < lowestNumPossibilities) {
                 priority = num;
                 lowestNumPossibilities = numpossibilities;
@@ -64,6 +83,12 @@ public class NumberSet {
                 assignments.add(new Assignment(ts,ts.numBombs()));
             }
             addLocalSolution(new LocalSolution(assignments));
+            for (Assignment assignment : forcedAssignments) {
+                assignment.tileset.unassign();
+            }
+            for (Tile forced : forcedNumbers) {
+                forced.searched = false;
+            }
             return;
         }
 
@@ -80,48 +105,15 @@ public class NumberSet {
         }
         //System.out.println(numSearched);
         //numsearched--;
+        for (Assignment assignment : forcedAssignments) {
+            assignment.tileset.unassign();
+        }
+        for (Tile forced : forcedNumbers) {
+            forced.searched = false;
+        }
         priority.searched = false;
     }
-    /*
-    public void dumbFillLocalSolutions() {
 
-
-        if (members.size() == 0) {
-            return;
-        }
-        boolean allsearched = (numsearched == members.size() - 1);
-        if (allsearched) {
-            HashMap<TileSet, Integer> assignment = new HashMap<TileSet,Integer>();
-            for (TileSet ts: this.tileSets) {
-                assignment.put(ts,ts.numBombs());
-            }
-            addLocalSolution(new LocalSolution(assignment));
-            return;
-        }
-        Tile priority = members.get(numsearched);
-        numsearched++;
-
-
-        List<TileSet> toAssign = new ArrayList<TileSet>();
-        for (TileSet ts: priority.tileSetRadius()) {
-            if (!ts.isAssigned) {
-                toAssign.add(ts);
-            }
-        }
-        priority.searched = true;
-        for (HashMap<TileSet, Integer> possibility : priority.allPossibilities()) {
-            for (Map.Entry<TileSet, Integer> pair : possibility.entrySet()) {
-                pair.getKey().assign(pair.getValue());
-            }
-            dumbFillLocalSolutions();
-            for (TileSet ts : toAssign) {
-                ts.unassign();
-            }
-        }
-        numsearched--;
-        priority.searched = false;
-    }
-    */
 
     BigInteger numSolutionsWithBombs(int numbombs) {
         if (members.size() == 0 && !localSolutions.containsKey(numbombs)) {
