@@ -10,13 +10,13 @@ public class NumberSet {
 
 
     List<Tile> members;
-    HashMap<Integer,ArrayList<LocalSolution>> localSolutions;
+    HashMap<Integer,BigInteger> numLocalSolutions;
     HashSet<TileSet> tileSets;
     int numsearched = 0;
 
     public NumberSet(List<Tile> numbers) {
         this.members = numbers;
-        this.localSolutions = new HashMap<Integer,ArrayList<LocalSolution>>();
+        this.numLocalSolutions = new HashMap<Integer,BigInteger>();
         HashSet<TileSet> tileSets = new HashSet<TileSet>();
         for (Tile num : members) {
             for (TileSet ts : num.tileSetRadius()) {
@@ -28,8 +28,9 @@ public class NumberSet {
 
     public void addLocalSolution(LocalSolution sol) {
         int numBombs = sol.numBombs();
-        localSolutions.putIfAbsent(numBombs,new ArrayList<LocalSolution>());
-        localSolutions.get(numBombs).add(sol);
+        numLocalSolutions.putIfAbsent(numBombs, BigInteger.ZERO);
+        BigInteger toAdd = numLocalSolutions.get(numBombs);
+        numLocalSolutions.replace(numBombs, toAdd.add(sol.variations));
     }
 
     public void fillLocalSolutions() {
@@ -116,7 +117,7 @@ public class NumberSet {
 
 
     BigInteger numSolutionsWithBombs(int numbombs) {
-        if (members.size() == 0 && !localSolutions.containsKey(numbombs)) {
+        if (members.size() == 0 && !numLocalSolutions.containsKey(numbombs)) {
             for (TileSet ts : tileSets) {
                 List<Assignment> assignments = new ArrayList<Assignment>();
                 assignments.add(new Assignment(ts, numbombs));
@@ -125,14 +126,14 @@ public class NumberSet {
                 return sol.variations;
             }
         }
-        BigInteger result = BigInteger.ZERO;
-        if (localSolutions.containsKey(numbombs)) {
-            for (LocalSolution sol : localSolutions.get(numbombs)) {
-                result = result.add(sol.variations);
-            }
+
+        if (numLocalSolutions.containsKey(numbombs)) {
+            return numLocalSolutions.get(numbombs);
         }
 
-        return result;
+        else {
+            return BigInteger.ZERO;
+        }
     }
 
     int minimum() {
@@ -140,7 +141,7 @@ public class NumberSet {
             return 0;
         }
         int result = 0;
-        for (int numbombs : localSolutions.keySet()) {
+        for (int numbombs : numLocalSolutions.keySet()) {
             if (result == 0) {
                 result = numbombs;
             }
@@ -156,15 +157,15 @@ public class NumberSet {
             }
         }
         int result = 0;
-        for (int numbombs : localSolutions.keySet()) {
+        for (int numbombs : numLocalSolutions.keySet()) {
             result = Math.max(result, numbombs);
         }
         return result;
     }
 
     public void pushGlobalCombinations(BigInteger combinations, int numbombs) {
-        for (LocalSolution solution : localSolutions.get(numbombs)) {
-            solution.pushGlobalCombinations(combinations);
+        for (TileSet ts : tileSets) {
+           ts.addToRunningTotal(numbombs, combinations);
         }
     }
 

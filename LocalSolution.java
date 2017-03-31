@@ -26,13 +26,13 @@ public class LocalSolution {
             numbombs += assignment.numbombs;
             variations = variations.multiply(Combinatorics.bigBinomial(assignment.tileset.numTiles, assignment.numbombs));
         }
-
         this.numbombs = numbombs;
+        for (Assignment assignment : assignments) {
+            assignment.tileset.addToLocalSolutionBombs(numbombs, variations.multiply(BigInteger.valueOf(assignment.numbombs)));
+        }
+
+
     }
 
-    public void pushGlobalCombinations(BigInteger totalcombinations) {
-        for (Assignment assignment : assignments) {
-            assignment.tileset.addToRunningTotal(totalcombinations.multiply(BigInteger.valueOf(assignment.numbombs)).multiply(variations));
-        }
-    }
+
 }

@@ -13,6 +13,7 @@ public class TileSet {
     Set<Tile> adjacentNumbers;
     int numTiles;
     BigInteger runningtotal;
+    HashMap<Integer,BigInteger> localSolutionBombs;
     double probability;
 
     public TileSet(Set<Tile> adjacentNumbers, List<Tile> members) {
@@ -21,6 +22,7 @@ public class TileSet {
         this.numTiles = members.size();
         this.runningtotal = BigInteger.ZERO;
         this.probability = 0;
+        localSolutionBombs = new HashMap<Integer, BigInteger>();
         numBombs = -1;
         isAssigned = false;
 
@@ -49,6 +51,15 @@ public class TileSet {
             result = Math.min(result, n.remainingBombs());
         }
         return result;
+    }
+
+    public void addToLocalSolutionBombs(int numBombs, BigInteger combinations) {
+        if (combinations.equals(BigInteger.ZERO)) {
+            return;
+        }
+        localSolutionBombs.putIfAbsent(numBombs, BigInteger.ZERO);
+        BigInteger toAdd = localSolutionBombs.get(numBombs);
+        localSolutionBombs.replace(numBombs,toAdd.add(combinations));
     }
 
     public int minimum() {
@@ -84,8 +95,10 @@ public class TileSet {
         return false;
     }
 
-    public void addToRunningTotal(BigInteger total) {
-        this.runningtotal = runningtotal.add(total);
+    public void addToRunningTotal(int numBombs, BigInteger total) {
+        if (localSolutionBombs.containsKey(numBombs)) {
+            this.runningtotal = runningtotal.add(localSolutionBombs.get(numBombs).multiply(total));
+        }
     }
 
     public void setProbabilities(BigInteger totalSolutions) {
