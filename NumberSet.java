@@ -10,13 +10,13 @@ public class NumberSet {
 
 
     List<Tile> members;
-    HashMap<Integer,BigInteger> numLocalSolutions;
+    HashMap<Integer, BigInteger> numLocalSolutions;
     HashSet<TileSet> tileSets;
     int numsearched = 0;
 
     public NumberSet(List<Tile> numbers) {
         this.members = numbers;
-        this.numLocalSolutions = new HashMap<Integer,BigInteger>();
+        this.numLocalSolutions = new HashMap<Integer, BigInteger>();
         HashSet<TileSet> tileSets = new HashSet<TileSet>();
         for (Tile num : members) {
             for (TileSet ts : num.tileSetRadius()) {
@@ -50,7 +50,6 @@ public class NumberSet {
             if (num.searched) {
                 continue;
             }
-
             List<List<Assignment>> allPossibilities = num.allPossibilities();
             int numpossibilities = allPossibilities.size();
             if (numpossibilities == 0) {
@@ -64,9 +63,9 @@ public class NumberSet {
                 return;
             }
             if (numpossibilities == 1) {
+                forcedNumbers.add(num);
                 for (Assignment assignment : allPossibilities.get(0)) {
                     forcedAssignments.add(assignment);
-                    forcedNumbers.add(num);
                     assignment.tileset.assign(assignment.numbombs);
                 }
                 num.searched = true;
@@ -80,19 +79,19 @@ public class NumberSet {
         }
         if (allsearched) {
             List<Assignment> assignments = new ArrayList<Assignment>();
-            for (TileSet ts: this.tileSets) {
-                assignments.add(new Assignment(ts,ts.numBombs()));
+            for (TileSet ts : this.tileSets) {
+                assignments.add(new Assignment(ts, ts.numBombs()));
             }
             addLocalSolution(new LocalSolution(assignments));
             for (Assignment assignment : forcedAssignments) {
                 assignment.tileset.unassign();
             }
+
             for (Tile forced : forcedNumbers) {
                 forced.searched = false;
             }
             return;
         }
-
         priority.searched = true;
         for (List<Assignment> possibility : priority.allPossibilities()) {
             //numsearched = numSearched;
@@ -113,6 +112,7 @@ public class NumberSet {
             forced.searched = false;
         }
         priority.searched = false;
+
     }
 
 
@@ -129,9 +129,7 @@ public class NumberSet {
 
         if (numLocalSolutions.containsKey(numbombs)) {
             return numLocalSolutions.get(numbombs);
-        }
-
-        else {
+        } else {
             return BigInteger.ZERO;
         }
     }
@@ -165,10 +163,17 @@ public class NumberSet {
 
     public void pushGlobalCombinations(BigInteger combinations, int numbombs) {
         for (TileSet ts : tileSets) {
-           ts.addToRunningTotal(numbombs, combinations);
+            ts.addToRunningTotal(numbombs, combinations);
         }
     }
 
+    public String toString() {
+        String result = "";
+        for (Tile t : members) {
+            result = result + t.getPosn() + ",";
+        }
+        return result;
+    }
 
 
 }
