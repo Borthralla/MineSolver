@@ -85,12 +85,13 @@ public class TileSet {
     }
 
     public int hash() {
-        return Objects.hash(members);
+        return Objects.hash(adjacentNumbers);
     }
+
 
     public boolean equals(Object that) {
         if (that instanceof TileSet) {
-            return ((TileSet) that).members.equals(this.members);
+            return ((TileSet) that).adjacentNumbers.equals(this.adjacentNumbers);
         }
         return false;
     }
@@ -106,6 +107,14 @@ public class TileSet {
         for (Tile t : members) {
             t.setProbability(probability);
         }
+    }
+
+    public String toString() {
+        String result = "[";
+        for (Tile t : members) {
+            result = result + t.getPosn() + ",";
+        }
+        return result + "]";
     }
 
 

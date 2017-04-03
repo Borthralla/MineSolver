@@ -25,7 +25,11 @@ public class Board {
         for (int i = 0; i < width * height; i++) {
             tiles.put(i, new Tile(i));
         }
+
     }
+
+
+
 
     /**
      * Clears the tile at the given position
@@ -36,12 +40,59 @@ public class Board {
         tiles.get(position).clear();
     }
 
+    public void coverTile(int position) {tiles.get(position).cover();}
+
     public void assignTile(int position, int number) {
         tiles.get(position).assignNumber(number);
     }
 
+    public void assignValue(int position, int number) {tiles.get(position).assignValue(number);}
+
     public void assignBomb(int position) {
         tiles.get(position).makeBomb();
+    }
+
+    public void assignRandomValues() {
+        List<Integer> tileposns = new ArrayList<Integer>();
+        for (int i = 0; i < width * height; i++) {
+            tileposns.add(i);
+        }
+        Combinatorics.shuffle(tileposns);
+        for (int i = 0; i < totalbombs; i++) {
+            //System.out.println("result.assignBomb(" + tileposns.get(i) + ");");
+            assignBomb(tileposns.get(i));
+        }
+        for (int i = 0; i < width * height; i++) {
+            if (!tiles.get(i).isBomb()) {
+                int numBombs = radius(i, tile -> tile.isBomb()).size();
+               // System.out.println("result.assignValue(" + i + ", " + numBombs + ");" );
+                assignValue(i, numBombs);
+            }
+        }
+    }
+
+    public void assignRandomValuesWithZero(int clickpos) {
+        List<Integer> tileposns = new ArrayList<Integer>();
+        for (int i = 0; i < width * height; i++) {
+            tileposns.add(i);
+        }
+        tileposns.remove(clickpos);
+        for (Tile adj : radius(clickpos)) {
+            tileposns.remove(Integer.valueOf(adj.getPosn()));
+        }
+
+        Combinatorics.shuffle(tileposns);
+        for (int i = 0; i < totalbombs; i++) {
+            //System.out.println("result.assignBomb(" + tileposns.get(i) + ");");
+            assignBomb(tileposns.get(i));
+        }
+        for (int i = 0; i < width * height; i++) {
+            if (!tiles.get(i).isBomb()) {
+                int numBombs = radius(i, tile -> tile.isBomb()).size();
+                //System.out.println("result.assignValue(" + i + ", " + numBombs + ");" );
+                assignValue(i, numBombs);
+            }
+        }
     }
 
     /**
@@ -69,7 +120,7 @@ public class Board {
         ArrayList<Tile> result = new ArrayList<Tile>();
 
         for (Tile t : tiles.values()) {
-            if (t.isAssigned()) {
+            if (t.isNumber()) {
                 result.add(t);
             }
         }
@@ -141,6 +192,56 @@ public class Board {
         return result;
     }
 
+    public void reveal(int posn) {
+        Tile toClear = tiles.get(posn);
+        if (toClear.isBomb() || !toClear.isAssigned()) {
+            tiles.get(posn).isFlagged = true;
+            return;
+        }
+        clearTile(posn);
+        if (toClear.getValue() == 0) {
+            for (Tile t : radius(posn,tile -> tile.isCovered())) {
+                reveal(t.getPosn());
+            }
+        }
+    }
+
+    public boolean revealLowest() {
+        Tile lowest = null;
+        double lowestProbability = 1.00;
+        boolean hasZero = false;
+        boolean hasAny = false;
+        boolean result = true;
+        for (Tile t : tiles.values()) {
+            if (t.isNumber() || t.isFlagged) {
+                continue;
+            }
+            hasAny = true;
+            if (t.probability == 0 ) {
+                reveal(t.getPosn());
+                hasZero = true;
+            }
+            else {
+                if (t.probability < lowestProbability) {
+                    lowestProbability = t.probability;
+                    lowest = t;
+                }
+            }
+        }
+
+        if (!hasZero && hasAny) {
+            reveal(lowest.getPosn());
+            if (lowest.isFlagged) {
+                return false;
+            }
+            return true;
+        }
+        if (hasZero) {
+            return true;
+        }
+        return false;
+    }
+
 
 
     public ArrayList<NumberSet> numberSets() {
@@ -148,7 +249,7 @@ public class Board {
         HashMap<Tile, Boolean> numberspassed = new HashMap<Tile, Boolean>();
 
         for (Tile t : tiles.values()) {
-            if (t.isAssigned()) {
+            if (t.isNumber()) {
                 numberspassed.put(t, false);
             }
         }
@@ -158,6 +259,8 @@ public class Board {
                 ArrayList<Tile> connectedNumbers = new ArrayList<Tile>();
                 Deque<Tile> tileStack = new ArrayDeque<Tile>();
                 tileStack.addFirst(n);
+                connectedNumbers.add(n);
+                numberspassed.replace(n,true);
                 while (tileStack.size() > 0) {
                     Tile branch = tileStack.removeFirst();
                     for (Tile adj : newAdjacentNumbers(branch, numberspassed)) {
@@ -181,7 +284,7 @@ public class Board {
     private ArrayList<Tile> newAdjacentNumbers(Tile numTile, HashMap<Tile, Boolean> numberspassed) {
         ArrayList<Tile> result = new ArrayList<Tile>();
         for (Tile c : radius(numTile.getPosn(), tile -> !tile.isCleared())) {
-            for (Tile n : radius(c.getPosn(), tile -> tile.isAssigned() && !numberspassed.get(tile))) {
+            for (Tile n : radius(c.getPosn(), tile -> tile.isNumber() && !numberspassed.get(tile))) {
                 numberspassed.replace(n, true);
                 result.add(n);
             }
@@ -192,10 +295,11 @@ public class Board {
     public String toString() {
         StringBuilder result = new StringBuilder();
         for (Tile t : tiles.values()) {
-            if (t.isAssigned()) {
-                result.append(" " + Integer.toString(t.getValue()) + " ");
+            if (t.isNumber()) {
+                result.append("  " + Integer.toString(t.getValue()) + "   ");
             } else {
-                result.append(Double.toString(t.probability) + " ");
+                result.append((" " + Double.toString(t.probability) + "00").substring(0,5)
+                        + " ");
             }
             if (t.getPosn() % width == width - 1) {
                 result.append("\n");
@@ -210,7 +314,7 @@ public class Board {
         HashMap<HashSet<Tile>, List<Tile>> map = new HashMap<HashSet<Tile>, List<Tile>>();
         for (Tile t : tiles.values()) {
             if (t.isCovered()) {
-                HashSet<Tile> adjacentNumbers = new HashSet<Tile>(radius(t.getPosn(), tile -> tile.isAssigned()));
+                HashSet<Tile> adjacentNumbers = new HashSet<Tile>(radius(t.getPosn(), tile -> tile.isNumber()));
                 map.putIfAbsent(adjacentNumbers,new ArrayList<Tile>());
                 map.get(adjacentNumbers).add(t);
             }
@@ -225,7 +329,15 @@ public class Board {
         return result;
     }
 
+    public void resetNumbers() {
+        for (Tile t : tiles.values()) {
+            t.resetTileSetRadius();
+        }
+    }
+
     public void findProbabilities() throws Exception {
+        this.totalSolutions = BigInteger.ZERO;
+
         List<TileSet> tilesets = this.tileSets();
         List<NumberSet> numbersets = this.numberSets();
         for (TileSet ts : tilesets) {
@@ -238,26 +350,39 @@ public class Board {
             }
         }
         List<MinMaxPair> minmaxpairs = new ArrayList<MinMaxPair>();
+        int remainingBombs = totalbombs;
+        List<NumberSetAssignment> defaultAssignments = new ArrayList<NumberSetAssignment>();
+        List<NumberSet> nontrivials = new ArrayList<NumberSet>();
         for (NumberSet ns : numbersets) {
             ns.fillLocalSolutions();
-            if (ns.members.size() > 0 && ns.localSolutions.keySet().size() == 0) {
-                throw new Exception("Invalid Board");
+            if (ns.members.size() > 0 && ns.numLocalSolutions.keySet().size() == 0) {
+                throw new Exception("Invalid Board " + Integer.toString(ns.members.get(0).getPosn()));
             }
-            minmaxpairs.add(new MinMaxPair(ns.minimum(),ns.maximum()));
+            int min = ns.minimum();
+            int max = ns.maximum();
+            if (min == max) {
+                remainingBombs -= min;
+                defaultAssignments.add(new NumberSetAssignment(ns,min));
+            }
+            else {
+                nontrivials.add(ns);
+                minmaxpairs.add(new MinMaxPair(min, max));
+            }
         }
 
         System.out.println("Search done!");
-        List<List<Integer>> allcombinations = Combinatorics.subsetSum(minmaxpairs,totalbombs);
+        System.out.println(minmaxpairs + ", " + remainingBombs);
+        List<List<Integer>> allcombinations = Combinatorics.subsetSum(minmaxpairs,remainingBombs);
         int numcombinations = allcombinations.size();
         for (List<Integer> assignment : allcombinations) {
-            List<NumberSetAssignment> assignments = new ArrayList<NumberSetAssignment>();
+            List<NumberSetAssignment> assignments = new ArrayList<NumberSetAssignment>(defaultAssignments);
             for (int i = 0; i < assignment.size(); i++) {
-                NumberSetAssignment nsa = new NumberSetAssignment(numbersets.get(i),assignment.get(i));
+                NumberSetAssignment nsa = new NumberSetAssignment(nontrivials.get(i),assignment.get(i));
                 assignments.add(nsa);
             }
             GlobalSolution globalsolution = new GlobalSolution(assignments);
             totalSolutions = totalSolutions.add(globalsolution.combinations);
-            //System.out.println(numcombinations);
+            if (numcombinations % 10000 == 0) {System.out.println(numcombinations);}
             numcombinations--;
         }
 
@@ -267,6 +392,6 @@ public class Board {
         for (TileSet ts : tilesets) {
             ts.setProbabilities(totalSolutions);
         }
-
+        resetNumbers();
     }
 }

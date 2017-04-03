@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Created by Philip on 3/25/2017.
@@ -115,6 +117,18 @@ public class Combinatorics {
             }
         }
         return result;
+    }
+
+    public static void shuffle(List<Integer> integers) {
+        Random rnd = ThreadLocalRandom.current();
+        for (int i = integers.size() - 1; i > 0; i--)
+        {
+            int index = rnd.nextInt(i + 1);
+            // Simple swap
+            int a = integers.get(index);
+            integers.set(index, integers.get(i));
+            integers.set(i,a);
+        }
     }
 
 

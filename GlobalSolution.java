@@ -19,6 +19,10 @@ public class GlobalSolution {
             BigInteger comb = assignment.numberset.numSolutionsWithBombs(assignment.numbombs);
             allcombinations.put(assignment.numberset,comb);
             combinations = combinations.multiply(comb);
+            if (comb.equals(BigInteger.ZERO)) {
+                System.out.println("Rare encounter with disjoint numberset!");
+                return;
+            }
         }
         for (NumberSetAssignment assignment : assignments) {
             assignment.numberset.pushGlobalCombinations(combinations.divide(allcombinations.get(assignment.numberset)), assignment.numbombs);

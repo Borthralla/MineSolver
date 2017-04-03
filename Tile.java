@@ -2,13 +2,14 @@ package Minesweeper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
  * Created by Philip on 3/19/2017.
  */
 public class Tile {
-
+    public boolean isFlagged = false;
     private int posn;
     private int value;
     private boolean isbomb;
@@ -49,6 +50,10 @@ public class Tile {
         this.probability = 0.0;
     }
 
+    public void resetTileSetRadius() {
+        this.tileSetRadius = new ArrayList<TileSet>();
+    }
+
     /**
      * gets the position of this tile
      * @return The position of the tile from top to bottem, left to right going horizontally.
@@ -58,7 +63,7 @@ public class Tile {
     }
 
     public boolean isCovered() {
-        return !(this.isCleared()) && !(this.isBomb());
+        return !(this.isCleared()) ;
     }
 
     public int getValue() {
@@ -66,6 +71,10 @@ public class Tile {
             throw new IllegalArgumentException("This tile hasn't been assigned a number yet");
         }
         return this.value;
+    }
+
+    public boolean isNumber() {
+        return this.isassigned && this.iscleared;
     }
 
     /**
@@ -106,7 +115,13 @@ public class Tile {
     public void assignNumber(int value) {
         this.value = value;
         this.isassigned = true;
+        this.isbomb = false;
         this.clear();
+    }
+
+    public void assignValue(int value) {
+        this.value = value;
+        this.isassigned = true;
     }
 
     public void makeBomb() {
@@ -115,7 +130,6 @@ public class Tile {
 
     public void cover() {
         this.iscleared = false;
-        this.isassigned = false;
     }
 
     public void addTileSet(TileSet tileset) {
@@ -173,7 +187,6 @@ public class Tile {
                 val = val - ts.numBombs();
             }
         }
-
         for (List<Integer> solution : Combinatorics.subsetSum(minmaxpairs,val)) {
 
             List<Assignment> possibility = new ArrayList<Assignment>();
@@ -183,6 +196,7 @@ public class Tile {
             }
             result.add(possibility);
         }
+
         return result;
     }
 
@@ -192,5 +206,9 @@ public class Tile {
 
     public void setProbability(double probability) {
         this.probability = probability;
+    }
+
+    public String toString() {
+        return Integer.toString(this.posn);
     }
 }
