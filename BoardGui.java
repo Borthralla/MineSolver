@@ -59,17 +59,17 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
         addMouseListener(this);
         addKeyListener(this);
         try {
-            this.zero = ImageIO.read(new File("src/Minesweeper/Images/0.png"));
-            this.one = ImageIO.read(new File("src/Minesweeper/Images/1.png"));
-            this.two = ImageIO.read(new File("src/Minesweeper/Images/2.png"));
-            this.three = ImageIO.read(new File("src/Minesweeper/Images/3.png"));
-            this.four = ImageIO.read(new File("src/Minesweeper/Images/4.png"));
-            this.five = ImageIO.read(new File("src/Minesweeper/Images/5.png"));
-            this.six = ImageIO.read(new File("src/Minesweeper/Images/6.png"));
-            this.seven = ImageIO.read(new File("src/Minesweeper/Images/7.png"));
-            this.eight = ImageIO.read(new File("src/Minesweeper/Images/8.png"));
-            this.covered = ImageIO.read(new File("src/Minesweeper/Images/facingDown.png"));
-            this.flagged = ImageIO.read(new File("src/Minesweeper/Images/flagged.png"));
+            this.zero = ImageIO.read(getClass().getResource("Images/0.png"));
+            this.one = ImageIO.read(getClass().getResource("Images/1.png"));
+            this.two = ImageIO.read(getClass().getResource("Images/2.png"));
+            this.three = ImageIO.read(getClass().getResource("Images/3.png"));
+            this.four = ImageIO.read(getClass().getResource("Images/4.png"));
+            this.five = ImageIO.read(getClass().getResource("Images/5.png"));
+            this.six = ImageIO.read(getClass().getResource("Images/6.png"));
+            this.seven = ImageIO.read(getClass().getResource("Images/7.png"));
+            this.eight = ImageIO.read(getClass().getResource("Images/8.png"));
+            this.covered = ImageIO.read(getClass().getResource("Images/facingDown.png"));
+            this.flagged = ImageIO.read(getClass().getResource("Images/flagged.png"));
 
 
         } catch (IOException e) {
@@ -84,6 +84,19 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         drawTiles(g);
+    }
+
+    public void showProbabilities(Graphics g) {
+        g.setColor(Color.black);
+        g.setFont(g.getFont().deriveFont(10));
+        for (Tile t : this.getBoard().tiles.values()) {
+            if (!t.isNumber()) {
+                double probability = t.probability * 100;
+                String probabilityString = (Double.toString(probability) + "00").substring(0, 4);
+                g.setColor(Color.black);
+                g.drawString(probabilityString, xCoordinate(t) + tileSize / 3, yCoordinate(t) + tileSize / 2);
+            }
+        }
     }
 
 
@@ -251,10 +264,18 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
             repaint();
             System.out.println("Done!");
         }
+        if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+            boardTemplate.switchMode();
+        }
+        if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
+            showProbabilities(this.getGraphics());
+        }
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
-
+        if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
+            this.repaint();
+        }
     }
 }

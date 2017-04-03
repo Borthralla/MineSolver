@@ -52,12 +52,31 @@ public class BoardTemplate {
         }
         if (this.mode == Mode.CUSTOM) {
             board.assignTile(posn,currentCustomNumber);
+            try {
+                board.findProbabilities();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void switchMode() {
+        if (this.mode == Mode.CUSTOM) {
+            this.mode = Mode.PLAY;
+        }
+        else {
+            this.mode = Mode.CUSTOM;
         }
     }
 
     public void onRightClick(int posn) {
         if (this.mode == Mode.CUSTOM) {
             board.coverTile(posn);
+            try {
+                board.findProbabilities();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -74,6 +93,9 @@ public class BoardTemplate {
                     e.printStackTrace();
                 }
             }
+        }
+        else {
+            this.onClick(0);
         }
     }
 

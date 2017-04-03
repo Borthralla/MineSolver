@@ -216,13 +216,14 @@ public class Board {
             if (t.isNumber() || t.isFlagged) {
                 continue;
             }
-            hasAny = true;
+
             if (t.probability == 0 ) {
                 reveal(t.getPosn());
                 hasZero = true;
             }
             else {
                 if (t.probability < lowestProbability) {
+                    hasAny = true;
                     lowestProbability = t.probability;
                     lowest = t;
                 }
