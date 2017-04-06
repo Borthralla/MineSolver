@@ -271,9 +271,7 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
             repaint();
             System.out.println("Done!");
         }
-        if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
-            boardTemplate.switchMode();
-        }
+        
         if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
             showProbabilities(this.getGraphics());
         }
@@ -311,6 +309,8 @@ class SettingsPanel extends JPanel implements ActionListener {
     Button resetButton;
     JCheckBox showProbabilities;
     JPanel boardPanel;
+    JRadioButton play;
+    JRadioButton custom;
 
     public SettingsPanel(BoardTemplate template, JPanel boardPanel) {
         this.template = template;
@@ -333,6 +333,18 @@ class SettingsPanel extends JPanel implements ActionListener {
         this.add(resetButton);
         this.add(showProbabilities);
         this.boardPanel = boardPanel;
+        this.play = new JRadioButton("Play", true);
+        play.addActionListener(this);
+        play.setActionCommand("toggle mode");
+        this.custom = new JRadioButton("Custom");
+        custom.addActionListener(this);
+        custom.setActionCommand("toggle mode");
+        ButtonGroup mode = new ButtonGroup();
+        mode.add(play);
+        mode.add(custom);
+        this.add(new JLabel("Mode"));
+        this.add(play);
+        this.add(custom);
 
     }
 
@@ -351,6 +363,11 @@ class SettingsPanel extends JPanel implements ActionListener {
             if (e.getActionCommand().equals("Toggle Show Probabilities")) {
                 template.toggleShowProbabilities();
                 boardPanel.requestFocus();
+                boardPanel.repaint();
+            }
+            if (e.getActionCommand().equals("toggle mode")) {
+                System.out.print("mode switch registered");
+                template.switchMode();
                 boardPanel.repaint();
             }
         }
