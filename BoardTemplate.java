@@ -8,17 +8,23 @@ public class BoardTemplate {
     Mode mode;
     boolean firstclick;
     int currentCustomNumber;
+    boolean showProbabilities;
 
     public BoardTemplate() {
         this.board = new Board(30,16,99);
         this.mode = Mode.PLAY;
         this.firstclick = true;
         this.currentCustomNumber = 0;
+        this.showProbabilities = true;
     }
 
     public void resetBoard(int width, int height, int totalbombs) {
         this.board = new Board(width, height, totalbombs);
         firstclick = true;
+    }
+
+    public void toggleShowProbabilities() {
+        showProbabilities = !showProbabilities;
     }
 
     public void resetBoard() {
@@ -47,7 +53,7 @@ public class BoardTemplate {
             try {
                 board.findProbabilities();
             } catch (Exception e) {
-                e.printStackTrace();
+               board.reset();
             }
         }
         if (this.mode == Mode.CUSTOM) {
@@ -55,7 +61,7 @@ public class BoardTemplate {
             try {
                 board.findProbabilities();
             } catch (Exception e) {
-                e.printStackTrace();
+                board.reset();
             }
         }
     }
@@ -75,7 +81,7 @@ public class BoardTemplate {
             try {
                 board.findProbabilities();
             } catch (Exception e) {
-                e.printStackTrace();
+                board.reset();
             }
         }
     }
@@ -84,18 +90,21 @@ public class BoardTemplate {
         return this.board;
     }
 
-    public void revealLowest() {
+    public void onEnter() {
         if (!firstclick) {
             if (board.revealLowest()) {
-                try {
-                    board.findProbabilities();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+
+                    try {
+                        board.findProbabilities();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
             }
         }
-        else {
-            this.onClick(0);
+        else { if(this.mode == Mode.PLAY) {
+            this.onClick(board.width * board.height / 2 + board.width / 2);
+            }
         }
     }
 

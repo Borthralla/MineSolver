@@ -3,10 +3,7 @@ package Minesweeper;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -18,10 +15,15 @@ import java.util.ArrayList;
 public class BoardGui extends JFrame {
     BoardTemplate boardTemplate;
     JPanel boardPanel;
+    JPanel settingsPanel;
 
     public BoardGui() {
         this.boardTemplate = new BoardTemplate();
         this.boardPanel = new BoardPanel(boardTemplate);
+        this.settingsPanel = new SettingsPanel(boardTemplate, boardPanel);
+        this.setLayout(new BorderLayout());
+        this.add(settingsPanel, BorderLayout.PAGE_START);
+
         this.add(boardPanel);
         this.pack();
         boardPanel.setFocusable(true);
@@ -51,13 +53,15 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
     Image eight;
     Image covered;
     Image flagged;
+    ColorGradient gradient;
     public BoardPanel (BoardTemplate boardtemplate) {
         this.boardTemplate = boardtemplate;
-        setPreferredSize(new Dimension(1920,1000));
+        setPreferredSize(new Dimension(1000,550));
 
         this.tileSize = (int)Math.min(getPreferredSize().getHeight() / getBoard().height, getPreferredSize().getWidth()/getBoard().width);
         addMouseListener(this);
         addKeyListener(this);
+        this.gradient = new ColorGradient(Color.WHITE, Color.BLACK);
         try {
             this.zero = ImageIO.read(getClass().getResource("Images/0.png"));
             this.one = ImageIO.read(getClass().getResource("Images/1.png"));
@@ -88,13 +92,13 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
     public void showProbabilities(Graphics g) {
         g.setColor(Color.black);
-        g.setFont(g.getFont().deriveFont(10));
+        g.setFont(g.getFont().deriveFont(5));
         for (Tile t : this.getBoard().tiles.values()) {
             if (!t.isNumber()) {
                 double probability = t.probability * 100;
                 String probabilityString = (Double.toString(probability) + "00").substring(0, 4);
                 g.setColor(Color.black);
-                g.drawString(probabilityString, xCoordinate(t) + tileSize / 3, yCoordinate(t) + tileSize / 2);
+                g.drawString(probabilityString, xCoordinate(t) + tileSize / 8, yCoordinate(t) + tileSize / 2 + 2);
             }
         }
     }
@@ -145,8 +149,10 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
             else {
                 g.drawImage(this.covered, x, y, x + tileSize, y + tileSize, 0, 0, 200, 200, null);
             }
-            g.setColor(tileColor(t));
-            g.fillRect(x,y, tileSize, tileSize);
+            if (boardTemplate.showProbabilities) {
+                g.setColor(tileColor(t));
+                g.fillRect(x, y, tileSize, tileSize);
+            }
         }
 
     }
@@ -167,6 +173,7 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
     public Color tileColor(Tile t) {
         double probability = t.probability;
+        double scaledProbability = probability;
         if (probability == 0.0) {
             return new Color(50, 118,255, 127);
         }
@@ -174,9 +181,8 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
             return new Color(255,0,0, 127);
         }
         else {
-            int r = (int)(255 * (1 - probability));
-            int g = 255;
-            return new Color(r,g,0, 127);
+
+            return gradient.getColor(probability);
         }
     }
 
@@ -189,14 +195,12 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        if (SwingUtilities.isLeftMouseButton(e)) {
-            boardTemplate.onClick(tileIndex(e));
-            repaint();
-        }
+
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
+        this.requestFocus();
         if (SwingUtilities.isRightMouseButton(e)) {
             boardTemplate.onRightClick(tileIndex(e));
         }
@@ -205,7 +209,10 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
     @Override
     public void mouseReleased(MouseEvent e) {
-
+        if (SwingUtilities.isLeftMouseButton(e)) {
+            boardTemplate.onClick(tileIndex(e));
+            repaint();
+        }
     }
 
     @Override
@@ -260,7 +267,7 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
         }
         if (e.getKeyCode() == KeyEvent.VK_ENTER) {
             System.out.println("Started search...");
-            boardTemplate.revealLowest();
+            boardTemplate.onEnter();
             repaint();
             System.out.println("Done!");
         }
@@ -277,5 +284,80 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
         if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
             this.repaint();
         }
+    }
+}
+
+class ColorGradient {
+    Color start;
+    Color end;
+    public ColorGradient(Color start, Color end) {
+        this.start = start;
+        this.end = end;
+    }
+
+    public Color getColor(double p) {
+        int r = (int)(start.getRed() + (end.getRed()-start.getRed())*p);
+        int g = (int)(start.getGreen() + (end.getGreen()-start.getGreen())*p);
+        int b = (int)(start.getBlue() + (end.getBlue()-start.getBlue())*p);
+        return new Color(r,g,b,127);
+    }
+}
+
+class SettingsPanel extends JPanel implements ActionListener {
+    BoardTemplate template;
+    TextField width;
+    TextField height;
+    TextField totalbombs;
+    Button resetButton;
+    JCheckBox showProbabilities;
+    JPanel boardPanel;
+
+    public SettingsPanel(BoardTemplate template, JPanel boardPanel) {
+        this.template = template;
+        this.setMinimumSize(new Dimension(1000,100));
+        this.width = new TextField("30", 3);
+        this.height = new TextField("16",3);
+        this.totalbombs = new TextField("99",4);
+        this.resetButton = new Button("Reset Board");
+        resetButton.setActionCommand("Reset");
+        resetButton.addActionListener(this);
+        this.showProbabilities = new JCheckBox("Show Probabilities", true);
+        showProbabilities.setActionCommand("Toggle Show Probabilities");
+        showProbabilities.addActionListener(this);
+        this.add(new JLabel("Width"));
+        this.add(width);
+        this.add(new JLabel("Height"));
+        this.add(height);
+        this.add(new JLabel("Total Bombs"));
+        this.add(totalbombs);
+        this.add(resetButton);
+        this.add(showProbabilities);
+        this.boardPanel = boardPanel;
+
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+
+        try {
+            if (e.getActionCommand().equals("Reset")) {
+                int width = Integer.parseInt(this.width.getText());
+                int height = Integer.parseInt(this.height.getText());
+                int totalBombs = Integer.parseInt(this.totalbombs.getText());
+                template.resetBoard(width, height, totalBombs);
+                boardPanel.repaint();
+                boardPanel.requestFocus();
+            }
+            if (e.getActionCommand().equals("Toggle Show Probabilities")) {
+                template.toggleShowProbabilities();
+                boardPanel.requestFocus();
+                boardPanel.repaint();
+            }
+        }
+        catch(Exception exception) {
+            return;
+        }
+
+
     }
 }
