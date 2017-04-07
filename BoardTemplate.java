@@ -51,7 +51,7 @@ public class BoardTemplate {
         if (this.mode == Mode.PLAY) {
             board.reveal(posn);
             try {
-                board.findProbabilities();
+                board.findBombSeparatedProbabilities();
             } catch (Exception e) {
                board.reset();
             }
@@ -59,7 +59,7 @@ public class BoardTemplate {
         if (this.mode == Mode.CUSTOM) {
             board.assignTile(posn,currentCustomNumber);
             try {
-                board.findProbabilities();
+                board.findBombSeparatedProbabilities();
             } catch (Exception e) {
                 board.reset();
             }
@@ -96,7 +96,7 @@ public class BoardTemplate {
             if (board.revealLowest()) {
 
                     try {
-                        board.findProbabilities();
+                        board.findBombSeparatedProbabilities();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }

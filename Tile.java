@@ -18,6 +18,7 @@ public class Tile {
     boolean searched;
     private List<TileSet> tileSetRadius;
     public double probability;
+    int remainingValue;
 
     /**
      * Creates a covered tile. Please note that value is not assigned yet.
@@ -42,6 +43,7 @@ public class Tile {
     public Tile(int position, int value) {
         this.posn = position;
         this.value = value;
+        this.remainingValue = value;
         this.isbomb = false;
         this.iscleared = true;
         this.isassigned = true;
@@ -114,6 +116,7 @@ public class Tile {
      */
     public void assignNumber(int value) {
         this.value = value;
+        this.remainingValue = value;
         this.isassigned = true;
         this.isbomb = false;
         this.clear();
@@ -121,6 +124,7 @@ public class Tile {
 
     public void assignValue(int value) {
         this.value = value;
+        this.remainingValue = value;
         this.isassigned = true;
     }
 
@@ -155,7 +159,7 @@ public class Tile {
     }
 
     public int remainingBombs() {
-        int result = getValue();
+        int result = remainingValue;
        for (TileSet tileset : tileSetRadius()) {
            if (tileset.isAssigned)
            result -= tileset.numBombs();
@@ -177,7 +181,7 @@ public class Tile {
         List<List<Assignment>> result = new ArrayList<List<Assignment>>();
         List<MinMaxPair> minmaxpairs = new ArrayList<MinMaxPair>();
         List<TileSet> unassigned = new ArrayList<TileSet>();
-        int val = getValue();
+        int val = remainingValue;
         for (TileSet ts : this.tileSetRadius()) {
             if (!ts.isAssigned) {
                 unassigned.add(ts);
