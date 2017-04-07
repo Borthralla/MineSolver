@@ -12,9 +12,9 @@ import java.util.ArrayList;
 /**
  * Created by Philip on 4/2/2017.
  */
-public class BoardGui extends JFrame {
+public class BoardGui extends JFrame implements ComponentListener {
     BoardTemplate boardTemplate;
-    JPanel boardPanel;
+    BoardPanel boardPanel;
     JPanel settingsPanel;
 
     public BoardGui() {
@@ -23,6 +23,7 @@ public class BoardGui extends JFrame {
         this.settingsPanel = new SettingsPanel(boardTemplate, boardPanel);
         this.setLayout(new BorderLayout());
         this.add(settingsPanel, BorderLayout.PAGE_START);
+        this.addComponentListener(this);
 
         this.add(boardPanel);
         this.pack();
@@ -37,6 +38,27 @@ public class BoardGui extends JFrame {
     }
 
 
+    @Override
+    public void componentResized(ComponentEvent e) {
+        boardPanel.setSize(new Dimension(this.getWidth() - 20, this.getHeight() - settingsPanel.getHeight() - 45));
+        boardPanel.setTileSize();
+        boardPanel.repaint();
+    }
+
+    @Override
+    public void componentMoved(ComponentEvent e) {
+
+    }
+
+    @Override
+    public void componentShown(ComponentEvent e) {
+
+    }
+
+    @Override
+    public void componentHidden(ComponentEvent e) {
+
+    }
 }
 
 class BoardPanel extends JPanel implements MouseListener, KeyListener {
@@ -54,9 +76,10 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
     Image covered;
     Image flagged;
     ColorGradient gradient;
+    boolean shiftDown = false;
     public BoardPanel (BoardTemplate boardtemplate) {
         this.boardTemplate = boardtemplate;
-        setPreferredSize(new Dimension(1000,550));
+        setPreferredSize(new Dimension(30*33 - 10,16*33));
 
         this.tileSize = (int)Math.min(getPreferredSize().getHeight() / getBoard().height, getPreferredSize().getWidth()/getBoard().width);
         addMouseListener(this);
@@ -83,6 +106,10 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
     public Board getBoard() {
         return boardTemplate.getBoard();
+    }
+
+    public void setTileSize() {
+        this.tileSize = (int)Math.min(getSize().getHeight() / getBoard().height, getSize().getWidth()/getBoard().width);
     }
 
     public void paintComponent(Graphics g) {
@@ -173,7 +200,6 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
     public Color tileColor(Tile t) {
         double probability = t.probability;
-        double scaledProbability = probability;
         if (probability == 0.0) {
             return new Color(50, 118,255, 127);
         }
@@ -184,6 +210,22 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
             return gradient.getColor(probability);
         }
+    }
+
+    public void drawNumericProbability() {
+        Point mouse = getMousePosition();
+        int column = (int)(mouse.getX() / tileSize);
+        int row = (int)(mouse.getY() / tileSize);
+        int posn = row * getBoard().width + column;
+        Tile t = getBoard().tiles.get(posn);
+        double probability = t.probability;
+        Graphics g = this.getGraphics();
+        g.setColor(new Color(255,255,0));
+        g.fillRect((int)mouse.getX() + 20, (int)mouse.getY() - 10, 135/16 * Double.toString(probability).length(), 30);
+
+        g.setColor(Color.black);
+        g.drawString(Double.toString(probability), (int)mouse.getX() + 25, (int)mouse.getY() + 10);
+
     }
 
     public int tileIndex(MouseEvent e) {
@@ -271,7 +313,11 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
             repaint();
             System.out.println("Done!");
         }
-        
+        if (!shiftDown && e.getKeyCode() == KeyEvent.VK_SHIFT ) {
+            shiftDown = true;
+            drawNumericProbability();
+        }
+
         if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
             showProbabilities(this.getGraphics());
         }
@@ -281,6 +327,10 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
     public void keyReleased(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
             this.repaint();
+        }
+        if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+            this.repaint();
+            shiftDown = false;
         }
     }
 }
@@ -308,11 +358,11 @@ class SettingsPanel extends JPanel implements ActionListener {
     TextField totalbombs;
     Button resetButton;
     JCheckBox showProbabilities;
-    JPanel boardPanel;
+    BoardPanel boardPanel;
     JRadioButton play;
     JRadioButton custom;
 
-    public SettingsPanel(BoardTemplate template, JPanel boardPanel) {
+    public SettingsPanel(BoardTemplate template, BoardPanel boardPanel) {
         this.template = template;
         this.setMinimumSize(new Dimension(1000,100));
         this.width = new TextField("30", 3);
@@ -342,7 +392,7 @@ class SettingsPanel extends JPanel implements ActionListener {
         ButtonGroup mode = new ButtonGroup();
         mode.add(play);
         mode.add(custom);
-        this.add(new JLabel("Mode"));
+        this.add(new JLabel("Mode:"));
         this.add(play);
         this.add(custom);
 
@@ -357,6 +407,7 @@ class SettingsPanel extends JPanel implements ActionListener {
                 int height = Integer.parseInt(this.height.getText());
                 int totalBombs = Integer.parseInt(this.totalbombs.getText());
                 template.resetBoard(width, height, totalBombs);
+                boardPanel.setTileSize();
                 boardPanel.repaint();
                 boardPanel.requestFocus();
             }
@@ -368,6 +419,7 @@ class SettingsPanel extends JPanel implements ActionListener {
             if (e.getActionCommand().equals("toggle mode")) {
                 System.out.print("mode switch registered");
                 template.switchMode();
+                boardPanel.requestFocus();
                 boardPanel.repaint();
             }
         }

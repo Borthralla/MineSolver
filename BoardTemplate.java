@@ -68,6 +68,7 @@ public class BoardTemplate {
 
     public void switchMode() {
         if (this.mode == Mode.CUSTOM) {
+            this.resetBoard();
             this.mode = Mode.PLAY;
         }
         else {
@@ -91,7 +92,7 @@ public class BoardTemplate {
     }
 
     public void onEnter() {
-        if (!firstclick) {
+        if (!firstclick && mode == Mode.PLAY) {
             if (board.revealLowest()) {
 
                     try {
