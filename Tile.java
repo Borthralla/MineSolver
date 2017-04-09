@@ -10,6 +10,8 @@ import java.util.List;
  */
 public class Tile {
     public boolean isFlagged = false;
+    public boolean isMarked = false;
+    public boolean isSafe = false;
     private int posn;
     private int value;
     private boolean isbomb;
@@ -126,6 +128,16 @@ public class Tile {
         this.value = value;
         this.remainingValue = value;
         this.isassigned = true;
+    }
+
+    public void markBomb() {
+        this.isMarked = true;
+        this.probability = 1.0;
+    }
+
+    public void unmarkBomb() {
+        this.isMarked = false;
+        this.probability  = 0.0;
     }
 
     public void makeBomb() {

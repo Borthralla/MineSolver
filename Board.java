@@ -54,6 +54,27 @@ public class Board {
         tiles.get(position).makeBomb();
     }
 
+    public void markBomb(int position) {tiles.get(position).markBomb();}
+
+    public void unmarkBomb(int position) {tiles.get(position).unmarkBomb();}
+
+    public void flagTile(int position) {
+        Tile toFlag = tiles.get(position);
+        if (!toFlag.isNumber()) {
+            boolean isFlagged = toFlag.isFlagged;
+            toFlag.isFlagged = !isFlagged;
+        }
+    }
+
+    public void chordTile(int position) {
+        Tile toChord = tiles.get(position);
+        if (toChord.isNumber() && radius(position,tile -> tile.isFlagged).size() == toChord.getValue()) {
+            for (Tile c : radius(position, tile -> tile.isCovered())) {
+                reveal(c.getPosn());
+            }
+        }
+    }
+
     public void assignRandomValues() {
         List<Integer> tileposns = new ArrayList<Integer>();
         for (int i = 0; i < width * height; i++) {
@@ -197,7 +218,7 @@ public class Board {
     public void reveal(int posn) {
         Tile toClear = tiles.get(posn);
         if (toClear.isBomb() || !toClear.isAssigned()) {
-            tiles.get(posn).isFlagged = true;
+            markBomb(posn);
             return;
         }
         clearTile(posn);
@@ -215,11 +236,11 @@ public class Board {
         boolean hasAny = false;
         boolean result = true;
         for (Tile t : tiles.values()) {
-            if (t.isNumber() || t.isFlagged) {
+            if (t.isNumber() || t.isFlagged || t.probability == 1.0) {
                 continue;
             }
 
-            if (t.probability == 0 ) {
+            if (t.isSafe ) {
                 reveal(t.getPosn());
                 hasZero = true;
             }
@@ -287,6 +308,10 @@ public class Board {
     private ArrayList<Tile> newAdjacentNumbers(Tile numTile, HashMap<Tile, Boolean> numberspassed) {
         ArrayList<Tile> result = new ArrayList<Tile>();
         for (Tile c : radius(numTile.getPosn(), tile -> !tile.isCleared())) {
+            if (c.isMarked) {
+                numTile.remainingValue--;
+                continue;
+            }
             for (Tile n : radius(c.getPosn(), tile -> tile.isNumber() && !numberspassed.get(tile))) {
                 numberspassed.replace(n, true);
                 result.add(n);
@@ -317,6 +342,10 @@ public class Board {
         HashMap<HashSet<Tile>, List<Tile>> map = new HashMap<HashSet<Tile>, List<Tile>>();
         for (Tile t : tiles.values()) {
             if (t.isCovered()) {
+                if (t.isMarked) {
+                    remainingBombs--;
+                    continue;
+                }
                 HashSet<Tile> adjacentNumbers = new HashSet<Tile>(radius(t.getPosn(), tile -> tile.isNumber()));
                 map.putIfAbsent(adjacentNumbers,new ArrayList<Tile>());
                 map.get(adjacentNumbers).add(t);
@@ -335,6 +364,7 @@ public class Board {
     public void resetNumbers() {
         for (Tile t : tiles.values()) {
             t.resetTileSetRadius();
+            t.isSafe = false;
             if (t.isAssigned()) {
                 t.remainingValue = t.getValue();
             }
@@ -342,6 +372,7 @@ public class Board {
     }
 
     public void findProbabilities() throws Exception {
+        resetNumbers();
         this.totalSolutions = BigInteger.ZERO;
 
         List<TileSet> tilesets = this.tileSets();
@@ -356,7 +387,7 @@ public class Board {
             }
         }
         List<MinMaxPair> minmaxpairs = new ArrayList<MinMaxPair>();
-        int remainingBombs = totalbombs;
+        int remainingBombs = this.remainingBombs;
         List<NumberSetAssignment> defaultAssignments = new ArrayList<NumberSetAssignment>();
         List<NumberSet> nontrivials = new ArrayList<NumberSet>();
         for (NumberSet ns : numbersets) {
@@ -398,7 +429,7 @@ public class Board {
         for (TileSet ts : tilesets) {
             ts.setProbabilities(totalSolutions);
         }
-        resetNumbers();
+        this.remainingBombs = totalbombs;
     }
 
     public void tryFindProbabilities() {
@@ -493,7 +524,9 @@ public class Board {
     }
 
     public void findBombSeparatedProbabilities() throws Exception {
+        System.out.println("Search started...");
         this.totalSolutions = BigInteger.ZERO;
+        resetNumbers();
 
         List<TileSet> tilesets = this.bombSeparatedtileSets();
         List<NumberSet> numbersets = this.bombSeparatedNumberSets();
@@ -531,6 +564,8 @@ public class Board {
         System.out.println(minmaxpairs + ", " + remainingBombs);
         List<List<Integer>> allcombinations = Combinatorics.subsetSum(minmaxpairs,remainingBombs);
         int numcombinations = allcombinations.size();
+        System.out.println(numcombinations);
+
         for (List<Integer> assignment : allcombinations) {
             List<NumberSetAssignment> assignments = new ArrayList<NumberSetAssignment>(defaultAssignments);
             for (int i = 0; i < assignment.size(); i++) {
@@ -546,10 +581,11 @@ public class Board {
         if (totalSolutions.equals(BigInteger.ZERO)) {
             throw new Exception("Board is invalid");
         }
+
+        //System.out.println(totalSolutions);
         for (TileSet ts : tilesets) {
             ts.setProbabilities(totalSolutions);
         }
-        resetNumbers();
         this.remainingBombs = totalbombs;
     }
 }

@@ -37,8 +37,8 @@ public class BoardTemplate {
     }
 
     public void setCurrentCustomNumber(int num) {
-        if (num < 0 || num > 8) {
-            throw new IllegalArgumentException("Number must be between 0 and 8");
+        if (num < 0 || num > 9) {
+            throw new IllegalArgumentException("Number must be between 0 and 9");
         }
         currentCustomNumber = num;
     }
@@ -49,7 +49,12 @@ public class BoardTemplate {
             this.firstclick = false;
         }
         if (this.mode == Mode.PLAY) {
-            board.reveal(posn);
+            if (board.tiles.get(posn).isNumber()) {
+                chordTile(posn);
+            }
+            else {
+                board.reveal(posn);
+            }
             try {
                 board.findBombSeparatedProbabilities();
             } catch (Exception e) {
@@ -57,9 +62,21 @@ public class BoardTemplate {
             }
         }
         if (this.mode == Mode.CUSTOM) {
-            board.assignTile(posn,currentCustomNumber);
+            boolean wasNumber = board.tiles.get(posn).isNumber();
+            if (currentCustomNumber != 9) {
+                board.unmarkBomb(posn);
+                board.assignTile(posn, currentCustomNumber);
+            }
+            else {
+                board.markBomb(posn);
+            }
             try {
-                board.findBombSeparatedProbabilities();
+                if (wasNumber) {
+                    board.findProbabilities();
+                }
+                else {
+                    board.findBombSeparatedProbabilities();
+                }
             } catch (Exception e) {
                 board.reset();
             }
@@ -77,14 +94,22 @@ public class BoardTemplate {
     }
 
     public void onRightClick(int posn) {
+        if (this.mode == Mode.PLAY) {
+            board.flagTile(posn);
+        }
         if (this.mode == Mode.CUSTOM) {
             board.coverTile(posn);
+            board.unmarkBomb(posn);
             try {
                 board.findProbabilities();
             } catch (Exception e) {
                 board.reset();
             }
         }
+    }
+
+    public void chordTile(int position) {
+        board.chordTile(position);
     }
 
     public Board getBoard() {
@@ -104,7 +129,8 @@ public class BoardTemplate {
             }
         }
         else { if(this.mode == Mode.PLAY) {
-            this.onClick(board.width * board.height / 2 + board.width / 2);
+
+            this.onClick(board.width * (board.height / 2) + board.width / 2);
             }
         }
     }

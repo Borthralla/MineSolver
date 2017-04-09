@@ -75,8 +75,10 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
     Image eight;
     Image covered;
     Image flagged;
+    Image bomb;
     ColorGradient gradient;
     boolean shiftDown = false;
+    long timeOfLastSearch = 0;
     public BoardPanel (BoardTemplate boardtemplate) {
         this.boardTemplate = boardtemplate;
         setPreferredSize(new Dimension(30*33 - 10,16*33));
@@ -97,6 +99,7 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
             this.eight = ImageIO.read(getClass().getResource("Images/8.png"));
             this.covered = ImageIO.read(getClass().getResource("Images/facingDown.png"));
             this.flagged = ImageIO.read(getClass().getResource("Images/flagged.png"));
+            this.bomb = ImageIO.read(getClass().getResource("Images/bomb.png"));
 
 
         } catch (IOException e) {
@@ -173,6 +176,15 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
             if (t.isFlagged) {
                 g.drawImage(this.flagged, x, y, x + tileSize, y + tileSize, 0, 0, 200, 200, null);
             }
+            else if (t.isMarked) {
+                g.drawImage(this.zero, x, y, x + tileSize, y + tileSize, 0, 0, 200, 200, null);
+                if (boardTemplate.showProbabilities) {
+                    g.setColor(tileColor(t));
+                    g.fillRect(x, y, tileSize, tileSize);
+                }
+                g.drawImage(this.bomb, x, y, x + tileSize, y + tileSize, 0, 0, 48, 48, null);
+                return;
+            }
             else {
                 g.drawImage(this.covered, x, y, x + tileSize, y + tileSize, 0, 0, 200, 200, null);
             }
@@ -200,7 +212,7 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
     public Color tileColor(Tile t) {
         double probability = t.probability;
-        if (probability == 0.0) {
+        if (t.isSafe) {
             return new Color(50, 118,255, 127);
         }
         if (probability == 1.0) {
@@ -243,6 +255,7 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
     @Override
     public void mousePressed(MouseEvent e) {
         this.requestFocus();
+
         if (SwingUtilities.isRightMouseButton(e)) {
             boardTemplate.onRightClick(tileIndex(e));
         }
@@ -303,15 +316,19 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
         if (e.getKeyCode() == KeyEvent.VK_8) {
             boardTemplate.setCurrentCustomNumber(8);
         }
+        if (e.getKeyCode() == KeyEvent.VK_9) {
+            boardTemplate.setCurrentCustomNumber(9);
+        }
         if (e.getKeyCode() == KeyEvent.VK_R) {
             boardTemplate.resetBoard();
             repaint();
         }
-        if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-            System.out.println("Started search...");
+
+        if (e.getKeyCode() == KeyEvent.VK_ENTER && System.nanoTime() - timeOfLastSearch > 12500000) {
+            System.out.println("Enter registered");
             boardTemplate.onEnter();
             repaint();
-            System.out.println("Done!");
+            timeOfLastSearch = System.nanoTime();
         }
         if (!shiftDown && e.getKeyCode() == KeyEvent.VK_SHIFT ) {
             shiftDown = true;

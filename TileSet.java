@@ -103,6 +103,13 @@ public class TileSet {
     }
 
     public void setProbabilities(BigInteger totalSolutions) {
+        if (runningtotal.equals(BigInteger.ZERO)) {
+            for (Tile t : members) {
+                t.isSafe = true;
+                t.setProbability(0.0);
+            }
+            return;
+        }
         double probability = Combinatorics.approximateDivide(runningtotal,totalSolutions) / numTiles;
         for (Tile t : members) {
             t.setProbability(probability);
