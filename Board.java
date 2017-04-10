@@ -541,7 +541,6 @@ public class Board {
         }
         List<MinMaxPair> minmaxpairs = new ArrayList<MinMaxPair>();
         int remainingBombs = this.remainingBombs;
-        List<NumberSetAssignment> defaultAssignments = new ArrayList<NumberSetAssignment>();
         List<NumberSet> nontrivials = new ArrayList<NumberSet>();
         for (NumberSet ns : numbersets) {
             ns.fillLocalSolutions();
@@ -552,7 +551,7 @@ public class Board {
             int max = ns.maximum();
             if (min == max) {
                 remainingBombs -= min;
-                defaultAssignments.add(new NumberSetAssignment(ns,min));
+                ns.setLocalProbability();
             }
             else {
                 nontrivials.add(ns);
@@ -567,7 +566,7 @@ public class Board {
         System.out.println(numcombinations);
 
         for (List<Integer> assignment : allcombinations) {
-            List<NumberSetAssignment> assignments = new ArrayList<NumberSetAssignment>(defaultAssignments);
+            List<NumberSetAssignment> assignments = new ArrayList<NumberSetAssignment>();
             for (int i = 0; i < assignment.size(); i++) {
                 NumberSetAssignment nsa = new NumberSetAssignment(nontrivials.get(i),assignment.get(i));
                 assignments.add(nsa);
@@ -583,8 +582,10 @@ public class Board {
         }
 
         //System.out.println(totalSolutions);
-        for (TileSet ts : tilesets) {
-            ts.setProbabilities(totalSolutions);
+        for (NumberSet nontrivial : nontrivials) {
+            for (TileSet ts : nontrivial.tileSets) {
+                ts.setProbabilities(totalSolutions);
+            }
         }
         this.remainingBombs = totalbombs;
     }

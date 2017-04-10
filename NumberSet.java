@@ -175,5 +175,21 @@ public class NumberSet {
         return result;
     }
 
+    public void setLocalProbability() throws Exception {
+        if (numLocalSolutions.size() > 1) {
+            throw new Exception("Local solution can have more than 1 amount of bombs");
+        }
+        int numbombs = 0;
+        BigInteger totalcombinations = BigInteger.ZERO;
+        for (Map.Entry<Integer, BigInteger> entry : numLocalSolutions.entrySet()) {
+            numbombs = entry.getKey();
+            totalcombinations = entry.getValue();
+        }
+        for (TileSet ts : tileSets) {
+            ts.addToRunningTotal(numbombs, BigInteger.ONE);
+            ts.setProbabilities(totalcombinations);
+        }
+    }
+
 
 }
