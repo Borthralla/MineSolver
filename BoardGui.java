@@ -325,7 +325,6 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
         }
 
         if (e.getKeyCode() == KeyEvent.VK_ENTER && System.nanoTime() - timeOfLastSearch > 12500000) {
-            System.out.println("Enter registered");
             boardTemplate.onEnter();
             repaint();
             timeOfLastSearch = System.nanoTime();

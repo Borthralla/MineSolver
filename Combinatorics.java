@@ -119,6 +119,94 @@ public class Combinatorics {
         return result;
     }
 
+    public static List<List<Integer>> fastSubsetSum(List<MinMaxPair> pairs,int sum){
+        List<List<Integer>> possibilities = new ArrayList<List<Integer>>();
+        int index = 0;
+        if (sum < 0) {
+            return possibilities;
+        }
+        if (pairs.size() == 0) {
+            if (sum == 0) {
+                possibilities.add(new ArrayList<Integer>());
+                return possibilities;
+            }
+            else {
+                return possibilities;
+            }
+        }
+        int min = 0;
+        int max = 0;
+        for (MinMaxPair pair : pairs) {
+            min += pair.min;
+            max += pair.max;
+        }
+        if (sum < min || sum > max) {
+            return possibilities;
+        }
+        if (sum == min) {
+            ArrayList<Integer> possibility = new ArrayList<Integer>();
+            possibility.add(sum);
+            for (MinMaxPair pair: pairs) {
+                possibility.add(pair.min);
+            }
+            possibilities.add(possibility);
+            return possibilities;
+        }
+        if (sum == max) {
+            ArrayList<Integer> possibility = new ArrayList<Integer>();
+            possibility.add(sum);
+            for (MinMaxPair pair: pairs) {
+                possibility.add(pair.max);
+            }
+            possibilities.add(possibility);
+            return possibilities;
+        }
+        int lowerbound = sum - max + pairs.get(0).max;
+        int upperbound = sum - min + pairs.get(0).min;
+        for (int val = Math.max(pairs.get(0).min,lowerbound); val <= Math.min(pairs.get(0).max,upperbound); val++){
+            ArrayList<Integer> possibility = new ArrayList<Integer>();
+            possibility.add(val); //First value will be the running total of the possibility.
+            possibility.add(val);
+            possibilities.add(possibility);
+        }
+        index++;
+        while (index < pairs.size()) {
+            upperbound += pairs.get(index).min;
+            lowerbound += pairs.get(index).max;
+            for (List<Integer> possibility : (ArrayList<List<Integer>>)((ArrayList<List<Integer>>)possibilities).clone()) {
+                int smallest = 0;
+                int biggest = 0;
+                if (possibility.get(0) + pairs.get(index).min >= lowerbound){
+                    smallest = pairs.get(index).min;
+                }
+                else{
+                    smallest = lowerbound - possibility.get(0);
+                }
+                if (possibility.get(0) + pairs.get(index).max <= upperbound) {
+                    biggest = pairs.get(index).max;
+                }
+                else {
+                    biggest = upperbound - possibility.get(0);
+                }
+                ArrayList<Integer> possibilityCopy = ((ArrayList<Integer>)((ArrayList<Integer>)possibility).clone());
+                for (int val = smallest; val <= biggest; val++){
+                    if (val==smallest) {
+                        possibility.set(0,possibility.get(0) + val);
+                        possibility.add(val);
+                    }
+                    else {
+                        ArrayList<Integer> newcopy = (ArrayList<Integer>)possibilityCopy.clone();
+                        newcopy.set(0, newcopy.get(0) + val);
+                        newcopy.add(val);
+                        possibilities.add(newcopy);
+                    }
+                }
+            }
+            index++;
+        }
+        return possibilities;
+    }
+
     public static void shuffle(List<Integer> integers) {
         Random rnd = ThreadLocalRandom.current();
         for (int i = integers.size() - 1; i > 0; i--)

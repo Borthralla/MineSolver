@@ -20,7 +20,7 @@ public class GlobalSolution {
             allcombinations.put(assignment.numberset,comb);
             combinations = combinations.multiply(comb);
             if (comb.equals(BigInteger.ZERO)) {
-                System.out.println("Rare encounter with disjoint numberset!");
+                //System.out.println("Rare encounter with disjoint numberset!");
                 return;
             }
         }

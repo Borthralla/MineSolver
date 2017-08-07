@@ -11,6 +11,8 @@ public class TileSet {
     int numBombs;
     List<Tile> members;
     Set<Tile> adjacentNumbers;
+    int numAdjacentExterior;
+    int numAdjacentInterior;
     int numTiles;
     BigInteger runningtotal;
     HashMap<Integer,BigInteger> localSolutionBombs;
@@ -19,6 +21,8 @@ public class TileSet {
     public TileSet(Set<Tile> adjacentNumbers, List<Tile> members) {
         this.members = members;
         this.adjacentNumbers = adjacentNumbers;
+        this.numAdjacentExterior = adjacentNumbers.size();
+        this.numAdjacentInterior = 0;
         this.numTiles = members.size();
         this.runningtotal = BigInteger.ZERO;
         this.probability = 0;

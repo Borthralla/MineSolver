@@ -18,6 +18,14 @@ public class BoardTemplate {
         this.showProbabilities = true;
     }
 
+    public BoardTemplate(int width, int height, int numBombs) {
+        this.board = new Board(width,height,numBombs);
+        this.mode = Mode.PLAY;
+        this.firstclick = true;
+        this.currentCustomNumber = 0;
+        this.showProbabilities = true;
+    }
+
     public void resetBoard(int width, int height, int totalbombs) {
         this.board = new Board(width, height, totalbombs);
         firstclick = true;
@@ -133,6 +141,31 @@ public class BoardTemplate {
             this.onClick(board.width * (board.height / 2) + board.width / 2);
             }
         }
+    }
+
+    public void autoSolve(int numTrials) {
+        int totalhit = 0;
+        double totalexpected = 0;
+        int totalTrials = 0;
+        int numWon = 0;
+        for (int i = 0; i < numTrials; i++) {
+            while(!board.isDone()) {
+                onEnter();
+            }
+            totalTrials++;
+            System.out.println("Solved board " + totalTrials + ": " + board.bombsHit + " bombs hit, " + board.expectedBombs + " bombs expected");
+            totalhit += board.bombsHit;
+            totalexpected += board.expectedBombs;
+            if (board.bombsHit == 0) {
+               numWon++;
+               //break;
+            }
+            resetBoard();
+        }
+        double averageHit = ((double)totalhit) / ((double)totalTrials);
+        double averageExpected = totalexpected / (double)totalTrials;
+        double winrate = (double)numWon/(double)totalTrials;
+        System.out.println("Average hit: " + averageHit + " Average expected: " + averageExpected + " Winrate: " + winrate);
     }
 
 

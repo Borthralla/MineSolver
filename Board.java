@@ -15,8 +15,12 @@ public class Board {
     int totalbombs;
     int remainingBombs;
     BigInteger totalSolutions;
+    double expectedBombs;
+    int bombsHit;
 
     public Board(int width, int height, int totalbombs) {
+        this.expectedBombs = 0;
+        this.bombsHit = 0;
         this.width = width;
         this.height = height;
         this.totalbombs = totalbombs;
@@ -80,7 +84,7 @@ public class Board {
         for (int i = 0; i < width * height; i++) {
             tileposns.add(i);
         }
-        Combinatorics.shuffle(tileposns);
+        Collections.shuffle(tileposns);
         for (int i = 0; i < totalbombs; i++) {
             //System.out.println("result.assignBomb(" + tileposns.get(i) + ");");
             assignBomb(tileposns.get(i));
@@ -89,6 +93,25 @@ public class Board {
             if (!tiles.get(i).isBomb()) {
                 int numBombs = radius(i, tile -> tile.isBomb()).size();
                // System.out.println("result.assignValue(" + i + ", " + numBombs + ");" );
+                assignValue(i, numBombs);
+            }
+        }
+    }
+    public void assignRandomValuesWithClear(int clickpos) {
+        List<Integer> tileposns = new ArrayList<Integer>();
+        for (int i = 0; i < width * height; i++) {
+            tileposns.add(i);
+        }
+        tileposns.remove(clickpos);
+        Collections.shuffle(tileposns);
+        for (int i = 0; i < totalbombs; i++) {
+            //System.out.println("result.assignBomb(" + tileposns.get(i) + ");");
+            assignBomb(tileposns.get(i));
+        }
+        for (int i = 0; i < width * height; i++) {
+            if (!tiles.get(i).isBomb()) {
+                int numBombs = radius(i, tile -> tile.isBomb()).size();
+                // System.out.println("result.assignValue(" + i + ", " + numBombs + ");" );
                 assignValue(i, numBombs);
             }
         }
@@ -104,7 +127,7 @@ public class Board {
             tileposns.remove(Integer.valueOf(adj.getPosn()));
         }
 
-        Combinatorics.shuffle(tileposns);
+        Collections.shuffle(tileposns);
         for (int i = 0; i < totalbombs; i++) {
             //System.out.println("result.assignBomb(" + tileposns.get(i) + ");");
             assignBomb(tileposns.get(i));
@@ -217,13 +240,18 @@ public class Board {
 
     public void reveal(int posn) {
         Tile toClear = tiles.get(posn);
+        if (toClear.isCovered()) {
+            expectedBombs = expectedBombs + toClear.probability;
+        }
         if (toClear.isBomb() || !toClear.isAssigned()) {
             markBomb(posn);
+            bombsHit++;
             return;
         }
         clearTile(posn);
         if (toClear.getValue() == 0) {
             for (Tile t : radius(posn,tile -> tile.isCovered())) {
+                t.probability = 0;
                 reveal(t.getPosn());
             }
         }
@@ -388,10 +416,9 @@ public class Board {
         }
         List<MinMaxPair> minmaxpairs = new ArrayList<MinMaxPair>();
         int remainingBombs = this.remainingBombs;
-        List<NumberSetAssignment> defaultAssignments = new ArrayList<NumberSetAssignment>();
         List<NumberSet> nontrivials = new ArrayList<NumberSet>();
         for (NumberSet ns : numbersets) {
-            ns.fillLocalSolutions();
+            ns.dynamicFillLocalSolutions();
             if (ns.members.size() > 0 && ns.numLocalSolutions.keySet().size() == 0) {
                 throw new Exception("Invalid Board " + Integer.toString(ns.members.get(0).getPosn()));
             }
@@ -399,7 +426,7 @@ public class Board {
             int max = ns.maximum();
             if (min == max) {
                 remainingBombs -= min;
-                defaultAssignments.add(new NumberSetAssignment(ns,min));
+                ns.setLocalProbability();
             }
             else {
                 nontrivials.add(ns);
@@ -407,19 +434,19 @@ public class Board {
             }
         }
 
-        System.out.println("Search done!");
+        //System.out.println("Search done!");
         System.out.println(minmaxpairs + ", " + remainingBombs);
-        List<List<Integer>> allcombinations = Combinatorics.subsetSum(minmaxpairs,remainingBombs);
+        List<List<Integer>> allcombinations = Combinatorics.fastSubsetSum(minmaxpairs,remainingBombs);
         int numcombinations = allcombinations.size();
         for (List<Integer> assignment : allcombinations) {
-            List<NumberSetAssignment> assignments = new ArrayList<NumberSetAssignment>(defaultAssignments);
-            for (int i = 0; i < assignment.size(); i++) {
-                NumberSetAssignment nsa = new NumberSetAssignment(nontrivials.get(i),assignment.get(i));
+            List<NumberSetAssignment> assignments = new ArrayList<NumberSetAssignment>();
+            for (int i = 0; i < nontrivials.size(); i++) {
+                NumberSetAssignment nsa = new NumberSetAssignment(nontrivials.get(i),assignment.get(i + 1));
                 assignments.add(nsa);
             }
             GlobalSolution globalsolution = new GlobalSolution(assignments);
             totalSolutions = totalSolutions.add(globalsolution.combinations);
-            if (numcombinations % 10000 == 0) {System.out.println(numcombinations);}
+            if (numcombinations % 100000 == 0) {System.out.println(numcombinations);}
             numcombinations--;
         }
 
@@ -477,7 +504,7 @@ public class Board {
 
         ArrayList<NumberSet> numbersets = new ArrayList<NumberSet>();
         for (ArrayList<Tile> tiles : result) {
-            numbersets.add(new NumberSet(tiles));
+            numbersets.add(new NumberSet(tiles, this));
         }
 
         return numbersets;
@@ -524,7 +551,7 @@ public class Board {
     }
 
     public void findBombSeparatedProbabilities() throws Exception {
-        System.out.println("Search started...");
+        //System.out.println("Search started...");
         this.totalSolutions = BigInteger.ZERO;
         resetNumbers();
 
@@ -532,7 +559,7 @@ public class Board {
         List<NumberSet> numbersets = this.bombSeparatedNumberSets();
         for (TileSet ts : tilesets) {
             if (ts.adjacentNumbers.size() == 0) {
-                NumberSet blankNumberSet = new NumberSet(new ArrayList<Tile>());
+                NumberSet blankNumberSet = new NumberSet(new ArrayList<Tile>(), this);
                 blankNumberSet.tileSets.add(ts);
 
                 numbersets.add(blankNumberSet);
@@ -543,7 +570,7 @@ public class Board {
         int remainingBombs = this.remainingBombs;
         List<NumberSet> nontrivials = new ArrayList<NumberSet>();
         for (NumberSet ns : numbersets) {
-            ns.fillLocalSolutions();
+            ns.dynamicFillLocalSolutions();
             if (ns.members.size() > 0 && ns.numLocalSolutions.keySet().size() == 0) {
                 throw new Exception("Invalid Board " + Integer.toString(ns.members.get(0).getPosn()));
             }
@@ -559,21 +586,22 @@ public class Board {
             }
         }
 
-        System.out.println("Search done!");
+        //System.out.println("Search done!");
         System.out.println(minmaxpairs + ", " + remainingBombs);
-        List<List<Integer>> allcombinations = Combinatorics.subsetSum(minmaxpairs,remainingBombs);
+        List<List<Integer>> allcombinations = Combinatorics.fastSubsetSum(minmaxpairs,remainingBombs);
         int numcombinations = allcombinations.size();
         System.out.println(numcombinations);
 
         for (List<Integer> assignment : allcombinations) {
             List<NumberSetAssignment> assignments = new ArrayList<NumberSetAssignment>();
-            for (int i = 0; i < assignment.size(); i++) {
-                NumberSetAssignment nsa = new NumberSetAssignment(nontrivials.get(i),assignment.get(i));
+            for (int i = 0; i < nontrivials.size(); i++) {
+                NumberSetAssignment nsa = new NumberSetAssignment(nontrivials.get(i),assignment.get(i+1));
                 assignments.add(nsa);
             }
             GlobalSolution globalsolution = new GlobalSolution(assignments);
             totalSolutions = totalSolutions.add(globalsolution.combinations);
-            if (numcombinations % 10000 == 0) {System.out.println(numcombinations);}
+            if (numcombinations % 100000 == 0) {System.out.println(numcombinations);
+                 }
             numcombinations--;
         }
 
@@ -588,5 +616,16 @@ public class Board {
             }
         }
         this.remainingBombs = totalbombs;
+    }
+
+    public boolean isDone() {
+        boolean result = true;
+        for (Tile t : tiles.values()) {
+            if (t.isCovered() && !t.isBomb()) {
+                result = false;
+            }
+        }
+        return result;
+
     }
 }

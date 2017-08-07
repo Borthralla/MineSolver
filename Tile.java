@@ -208,11 +208,9 @@ public class Tile {
             List<Assignment> possibility = new ArrayList<Assignment>();
             for (int i = 0; i < solution.size(); i++) {
                 possibility.add(new Assignment(unassigned.get(i),solution.get(i)));
-
             }
             result.add(possibility);
         }
-
         return result;
     }
 
