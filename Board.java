@@ -453,8 +453,10 @@ public class Board {
         if (totalSolutions.equals(BigInteger.ZERO)) {
             throw new Exception("Board is invalid");
         }
-        for (TileSet ts : tilesets) {
-            ts.setProbabilities(totalSolutions);
+        for (NumberSet nontrivial : nontrivials) {
+            for (TileSet ts : nontrivial.tileSets) {
+                ts.setProbabilities(totalSolutions);
+            }
         }
         this.remainingBombs = totalbombs;
     }
