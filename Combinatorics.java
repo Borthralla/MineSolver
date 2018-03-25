@@ -3,6 +3,7 @@ package Minesweeper;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -32,7 +33,7 @@ public class Combinatorics {
         }
     }
 
-    public static BigInteger  bigBinomial(int n, int k) {
+    public static BigInteger  slowBigBinomial(int n, int k) {
         if (k > n/2) {
             return bigBinomial(n,n-k);
         }
@@ -47,14 +48,90 @@ public class Combinatorics {
         }
         else {
 
-            BigInteger result =  bigBinomial(n,k-1).multiply(BigInteger.valueOf(n - k + 1)).divide(BigInteger.valueOf(k));
+            BigInteger result =  slowBigBinomial(n,k-1).multiply(BigInteger.valueOf(n - k + 1)).divide(BigInteger.valueOf(k));
 
+            return result;
+        }
+    }
+
+    public static BigInteger  bigBinomial(int n, int k) {
+        if (k > n/2) {
+            return bigBinomial(n,n-k);
+        }
+        if (k > n || k < 0 || n < 0) {
+            return BigInteger.ZERO;
+        }
+        if (k == 0 || n == k) {
+            return BigInteger.ONE;
+        }
+        if (k == n - 1 || k == 1) {
+            return BigInteger.valueOf(n);
+        }
+        else {
+            BigInteger result = BigInteger.ONE;
+            for (int i = 1; i <= k; i++) {
+                result = result.multiply(BigInteger.valueOf(n - i + 1)).divide(BigInteger.valueOf(i));
+            }
             return result;
         }
     }
 
     public static double approximateDivide(BigInteger numerator, BigInteger divisor) {
         return new BigDecimal(numerator).divide(new BigDecimal(divisor), 15, BigDecimal.ROUND_HALF_UP).doubleValue();
+    }
+
+    public static int numSubsetSum(List<MinMaxPair> minmaxpairs,int sum) {
+        if (minmaxpairs.size() == 0) {
+            if (sum == 0) {
+                return 1;
+            }
+            else {
+                return 0;
+            }
+        }
+        int minsum = 0;
+        int maxsum = 0;
+        for (MinMaxPair pair : minmaxpairs) {
+            minsum += pair.min;
+            maxsum += pair.max;
+        }
+        return numSubsetSumHelper(minmaxpairs,sum,0,new HashMap<Integer,Integer>(), minsum,maxsum);
+    }
+
+    private static int numSubsetSumHelper(List<MinMaxPair> minmaxpairs,int sum, int index, HashMap<Integer,Integer> hash, int minsum, int maxsum) {
+        int hashval = ((index + sum) * (index + sum + 1))/2 + sum;
+        MinMaxPair pair = minmaxpairs.get(index);
+        if (hash.containsKey(hashval)) {
+            return hash.get(hashval);
+        }
+        if (index == minmaxpairs.size() - 1) {
+            if (pair.min <= sum && pair.max >= sum) {
+                hash.put(hashval,1);
+                return 1;
+            }
+            else {
+                hash.put(hashval,0);
+                return 0;
+            }
+        }
+        if (minsum > sum || maxsum < sum) {
+            hash.put(hashval,0);
+            return 0;
+        }
+        if (minsum == sum || maxsum == sum) {
+            hash.put(hashval,1);
+            return 1;
+        }
+        int result = 0;
+        int lowerbound = sum - maxsum + pair.min;
+        int upperbound = sum - minsum + pair.max;
+        int lowest = Math.max(pair.min,lowerbound);
+        int highest = Math.min(pair.max,upperbound);
+        for (int val = lowest; val <= highest; val++) {
+            result += numSubsetSumHelper(minmaxpairs,sum - val, index + 1, hash, minsum - pair.min, maxsum - pair.max);
+        }
+        hash.put(hashval,result);
+        return result;
     }
 
     public static List<List<Integer>> subsetSum(List<MinMaxPair> minmaxpairs,int sum) {
