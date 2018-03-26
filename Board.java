@@ -238,7 +238,7 @@ public class Board {
         return result;
     }
 
-    public void reveal(int posn) {
+    public void slowReveal(int posn) {
         Tile toClear = tiles.get(posn);
         if (toClear.isCovered()) {
             expectedBombs = expectedBombs + toClear.probability;
@@ -252,10 +252,38 @@ public class Board {
         if (toClear.getValue() == 0) {
             for (Tile t : radius(posn,tile -> tile.isCovered())) {
                 t.probability = 0;
-                reveal(t.getPosn());
+                slowReveal(t.getPosn());
             }
         }
     }
+
+    public void reveal(int posn) {
+        Tile toClear = tiles.get(posn);
+        if (toClear.isCovered()) {
+            expectedBombs = expectedBombs + toClear.probability;
+        }
+        if (toClear.isBomb() || !toClear.isAssigned()) {
+            markBomb(posn);
+            bombsHit++;
+            return;
+        }
+        clearTile(posn);
+        if (toClear.getValue() == 0) {
+            Stack<Integer> toDo = new Stack<Integer>();
+            toDo.add(posn);
+            while (!toDo.isEmpty()) {
+                int toReveal = toDo.pop();
+                for (Tile t : radius(toReveal, tile -> tile.isCovered())) {
+                    t.probability = 0;
+                    clearTile(t.getPosn());
+                    if (t.getValue() == 0) {
+                        toDo.add(t.getPosn());
+                    }
+                }
+            }
+        }
+    }
+
 
     public boolean revealLowest() {
         Tile lowest = null;
@@ -282,6 +310,64 @@ public class Board {
         }
 
         if (!hasZero && hasAny) {
+            reveal(lowest.getPosn());
+            if (lowest.isFlagged) {
+                return false;
+            }
+            return true;
+        }
+        if (hasZero) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean revealLowestNonDetermined() {
+        Tile lowestDetermined = null;
+        Tile lowestNonDetermined = null;
+        double lowestDeterminedProbability = 1.00;
+        double lowestNonDeterminedProbability = 1.00;
+        boolean hasZero = false;
+        boolean hasNonDetermined = false;
+        boolean hasAny = false;
+        boolean result = true;
+        for (Tile t : tiles.values()) {
+            if (t.isSafe && t.isCovered() && !t.isFlagged ) {
+                hasZero = true;
+                reveal(t.getPosn());
+            }
+        }
+        if (!hasZero) {
+            for (Tile t : tiles.values()) {
+                if (t.isNumber() || t.isFlagged || t.probability == 1.0) {
+                    continue;
+                }
+                 else {
+                    if (!hasZero && t.probability < lowestNonDeterminedProbability) {
+                        hasAny = true;
+                        if (!isDetermined(t.getPosn())) {
+                            hasNonDetermined = true;
+                            lowestNonDeterminedProbability = t.probability;
+                            lowestNonDetermined = t;
+                        }
+                        else {
+                            if (t.probability < lowestDeterminedProbability) {
+                                lowestDeterminedProbability = t.probability;
+                                lowestDetermined = t;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (!hasZero && hasAny) {
+            Tile lowest = null;
+            if (hasNonDetermined) {
+                lowest = lowestNonDetermined;
+            }
+            else {
+                lowest = lowestDetermined;
+            }
             reveal(lowest.getPosn());
             if (lowest.isFlagged) {
                 return false;
@@ -393,6 +479,15 @@ public class Board {
         for (Tile t : tiles.values()) {
             t.resetTileSetRadius();
             t.isSafe = false;
+            if (t.isAssigned()) {
+                t.remainingValue = t.getValue();
+            }
+        }
+    }
+
+    public void softResetNumbers() {
+        for (Tile t : tiles.values()) {
+            t.resetTileSetRadius();
             if (t.isAssigned()) {
                 t.remainingValue = t.getValue();
             }
@@ -589,10 +684,10 @@ public class Board {
         }
 
         //System.out.println("Search done!");
-        System.out.println(minmaxpairs + ", " + remainingBombs);
+        //System.out.println(minmaxpairs + ", " + remainingBombs);
         List<List<Integer>> allcombinations = Combinatorics.fastSubsetSum(minmaxpairs,remainingBombs);
         int numcombinations = allcombinations.size();
-        System.out.println(numcombinations);
+        //System.out.println("Total: " + numcombinations);
 
         for (List<Integer> assignment : allcombinations) {
             List<NumberSetAssignment> assignments = new ArrayList<NumberSetAssignment>();
@@ -602,7 +697,7 @@ public class Board {
             }
             GlobalSolution globalsolution = new GlobalSolution(assignments);
             totalSolutions = totalSolutions.add(globalsolution.combinations);
-            if (numcombinations % 100000 == 0) {System.out.println(numcombinations);
+            if (numcombinations % 10000 == 0) {System.out.println("To go: " + numcombinations);
                  }
             numcombinations--;
         }
@@ -630,4 +725,87 @@ public class Board {
         return result;
 
     }
+
+    public boolean isValid() {
+        softResetNumbers();
+
+        List<TileSet> tilesets = this.bombSeparatedtileSets();
+        List<NumberSet> numbersets = this.bombSeparatedNumberSets();
+        for (TileSet ts : tilesets) {
+            if (ts.adjacentNumbers.size() == 0) {
+                NumberSet blankNumberSet = new NumberSet(new ArrayList<Tile>(), this);
+                blankNumberSet.tileSets.add(ts);
+                numbersets.add(blankNumberSet);
+                break;
+            }
+        }
+        List<MinMaxPair> minmaxpairs = new ArrayList<MinMaxPair>();
+        int remainingBombs = this.remainingBombs;
+        List<NumberSet> nontrivials = new ArrayList<NumberSet>();
+        for (NumberSet ns : numbersets) {
+            try {
+                ns.dynamicFillLocalSolutions();
+            } catch (Exception e) {
+                this.remainingBombs = totalbombs;
+                return false;
+            }
+            if (ns.members.size() > 0 && ns.numLocalSolutions.keySet().size() == 0) {
+                this.remainingBombs = totalbombs;
+                return false;
+            }
+            int min = ns.minimum();
+            int max = ns.maximum();
+            if (min == max) {
+                remainingBombs -= min;
+            }
+            else {
+                nontrivials.add(ns);
+                minmaxpairs.add(new MinMaxPair(min, max));
+            }
+        }
+
+        int numCombinations = Combinatorics.numSubsetSum(minmaxpairs,remainingBombs);
+        if (numCombinations == 0) {
+            this.remainingBombs = totalbombs;
+            return false;
+        }
+        else {
+            this.remainingBombs = totalbombs;
+            return true;
+        }
+    }
+
+    public boolean isDetermined(int pos) {
+        int totalValid = 0;
+        boolean wasBomb = tiles.get(pos).isBomb();
+        int initialValue = 0;
+        if (!wasBomb) {
+            initialValue = tiles.get(pos).getValue();
+        }
+        for (int i = 0; i <= radius(pos, tile -> tile.isCovered()).size(); i++) {
+            assignTile(pos,i);
+            if (isValid()) {
+                totalValid++;
+                if (totalValid == 2) {
+                    coverTile(pos);
+                    if (wasBomb) {
+                        assignBomb(pos);
+                    }
+                    else {
+                        assignValue(pos, initialValue);
+                    }
+                    return false;
+                }
+            }
+        }
+        coverTile(pos);
+        if (wasBomb) {
+            assignBomb(pos);
+        }
+        else {
+            assignValue(pos, initialValue);
+        }
+        return true;
+    }
+
 }
