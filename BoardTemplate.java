@@ -127,7 +127,6 @@ public class BoardTemplate {
     public void onEnter() {
         if (!firstclick && mode == Mode.PLAY) {
             if (board.revealLowest()) {
-
                     try {
                         board.findBombSeparatedProbabilities();
                     } catch (Exception e) {
@@ -137,7 +136,6 @@ public class BoardTemplate {
             }
         }
         else { if(this.mode == Mode.PLAY) {
-
             this.onClick(board.width * (board.height / 2) + board.width / 2);
             }
         }
