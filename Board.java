@@ -512,6 +512,7 @@ public class Board {
         List<MinMaxPair> minmaxpairs = new ArrayList<MinMaxPair>();
         int remainingBombs = this.remainingBombs;
         List<NumberSet> nontrivials = new ArrayList<NumberSet>();
+        BigInteger totalLocalSolutions = BigInteger.ONE;
         for (NumberSet ns : numbersets) {
             ns.dynamicFillLocalSolutions();
             if (ns.members.size() > 0 && ns.numLocalSolutions.keySet().size() == 0) {
@@ -522,6 +523,7 @@ public class Board {
             if (min == max) {
                 remainingBombs -= min;
                 ns.setLocalProbability();
+                totalLocalSolutions = ns.numLocalSolutions.get(min).multiply(totalLocalSolutions);
             }
             else {
                 nontrivials.add(ns);
@@ -554,6 +556,7 @@ public class Board {
             }
         }
         this.remainingBombs = totalbombs;
+        totalSolutions = totalSolutions.multiply(totalLocalSolutions);
     }
 
     public void tryFindProbabilities() {
@@ -729,8 +732,8 @@ public class Board {
     public boolean isValid() {
         softResetNumbers();
 
-        List<TileSet> tilesets = this.bombSeparatedtileSets();
-        List<NumberSet> numbersets = this.bombSeparatedNumberSets();
+        List<TileSet> tilesets = this.tileSets();
+        List<NumberSet> numbersets = numberSets();
         for (TileSet ts : tilesets) {
             if (ts.adjacentNumbers.size() == 0) {
                 NumberSet blankNumberSet = new NumberSet(new ArrayList<Tile>(), this);
@@ -779,7 +782,7 @@ public class Board {
         int totalValid = 0;
         boolean wasBomb = tiles.get(pos).isBomb();
         int initialValue = 0;
-        if (!wasBomb) {
+        if (!wasBomb && tiles.get(pos).isAssigned()) {
             initialValue = tiles.get(pos).getValue();
         }
         for (int i = 0; i <= radius(pos, tile -> tile.isCovered()).size(); i++) {
@@ -799,13 +802,157 @@ public class Board {
             }
         }
         coverTile(pos);
-        if (wasBomb) {
+        if (wasBomb && tiles.get(pos).isAssigned()) {
             assignBomb(pos);
         }
         else {
             assignValue(pos, initialValue);
         }
         return true;
+    }
+
+    public void makeBestMove() throws Exception {
+        this.findProbabilities();
+        int trueTotalSolutions = totalSolutions.intValue();
+        System.out.println(toString());
+        //TODO: Make totalSolutions include the trivial numbersets, because
+        //TODO: Make the tile's probability reset.
+        // they cannot be treated separately in this algorithm.
+        //First: get the list of non-determined tiles or find a safe tile
+        Boolean hasNonDetermined = false;
+        List<Tile> nonDetermined = new ArrayList<>();
+        Map<Tile,Double> probabilities = new HashMap<>();
+        //Collect all the non-determined tiles while checking for safe tiles
+        for (int pos = 0; pos < width * height; pos++) {
+            Tile tile = tiles.get(pos);
+            if (tile.isCleared() || tile.probability == 1.0) {
+                continue;
+            }
+            if (tile.isSafe) {
+                revealLowest(); //Clears only the safe tiles
+                return;
+            }
+            if (!isDetermined(pos)) {
+                hasNonDetermined = true;
+                nonDetermined.add(tiles.get(pos));
+                probabilities.put(tile,tile.probability);
+            }
+        }
+        if (!hasNonDetermined){
+            revealLowest(); //It doesn't matter where you go, might as well reveal the lowest probability tile
+            return;
+        }
+        //Sort nonDetermined by probability
+        Comparator<Tile> byProbability = Comparator.comparingDouble(tile -> tile.probability);
+        Collections.sort(nonDetermined, byProbability);
+        //Find the best non-determined tile
+        int lowestLosses = totalSolutions.intValue();
+        Tile bestTile = nonDetermined.get(0);
+        for (Tile tile : nonDetermined) {
+            int totalExpectedLosses = (int)Math.round(trueTotalSolutions * probabilities.get(tile));
+            int pos = tile.getPosn();
+            int trueValue = tile.getValue();
+            for (int num = 0; num <= radius(pos, t -> t.isCovered()).size(); num++) {
+                if (totalExpectedLosses >= lowestLosses) {
+                    break;
+                }
+                tile.assignValue(num);
+                tile.clear();
+                if (isValid()) {
+                    totalExpectedLosses += this.expectedLosses(lowestLosses, totalExpectedLosses);
+                }
+                tile.cover();
+            }
+            tile.assignValue(trueValue);
+            if (totalExpectedLosses < lowestLosses) {
+                lowestLosses = totalExpectedLosses;
+                bestTile = tile;
+            }
+        }
+        System.out.println(String.format("%d: %f", bestTile.getPosn(),  1 - lowestLosses * 1.0 / trueTotalSolutions));
+    }
+    public int expectedLosses(int maxLosses, int totalLosses) {
+        try {
+            this.findProbabilities();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        int trueTotalSolutions = totalSolutions.intValue();
+        //TODO: Make totalSolutions include the trivial numbersets, because
+        // they cannot be treated separately in this algorithm.
+        //First: get the list of non-determined tiles or find a safe tile
+        Boolean hasNonDetermined = false;
+        Boolean hasSafe = false;
+        Tile safeTile = tiles.get(0);
+        Map<Tile,Double> probabilities = new HashMap<>();
+        List<Tile> nonDetermined = new ArrayList<>();
+        //Collect all the non-determined tiles while checking for safe tiles
+        for (int pos = 0; pos < width * height; pos++) {
+            Tile tile = tiles.get(pos);
+            if (tile.isCleared() || tile.probability == 1.0) {
+                continue;
+            }
+            if (tile.isSafe) {
+                hasSafe = true;
+                safeTile = tile;
+                probabilities.put(tile,tile.probability);
+            }
+            if (!isDetermined(pos)) {
+                hasNonDetermined = true;
+                nonDetermined.add(tiles.get(pos));
+                probabilities.put(tile,tile.probability);
+            }
+        }
+        if (!hasNonDetermined){
+            return trueTotalSolutions - 1;
+        }
+        //Sort nonDetermined by probability
+        Comparator<Tile> byProbability = Comparator.comparingDouble(tile -> tile.probability);
+        Collections.sort(nonDetermined, byProbability);
+        //Find the best non-determined tile
+        //The number of losses that can not be exceeded is the total number of losses minus all the losses accumulated
+        //before and during this branch
+        int lowestLosses = maxLosses - totalLosses;
+        if (hasSafe) {
+            Tile tile = safeTile;
+            int totalExpectedLosses = (int)Math.round(trueTotalSolutions * probabilities.get(tile));
+            int pos = tile.getPosn();
+            int trueValue = tile.getValue();
+            for (int num = 0; num <= radius(pos, t -> t.isCovered()).size(); num++) {
+                if (totalExpectedLosses >= lowestLosses) {
+                    break;
+                }
+                tile.assignValue(num);
+                tile.clear();
+                if (isValid()) {
+                    totalExpectedLosses += this.expectedLosses(maxLosses, totalExpectedLosses);
+                }
+                tile.cover();
+            }
+            return totalExpectedLosses;
+        }
+
+        for (Tile tile : nonDetermined) {
+            int totalExpectedLosses = (int)Math.round(totalSolutions.intValue() * probabilities.get(tile));
+            int pos = tile.getPosn();
+            int trueValue = tile.getValue();
+            for (int num = 0; num <= radius(pos, t -> t.isCovered()).size(); num++) {
+                if (totalExpectedLosses >= lowestLosses) {
+                    break;
+                }
+                tile.assignValue(num);
+                tile.clear();
+                if (isValid()) {
+                    totalExpectedLosses += this.expectedLosses(maxLosses, totalExpectedLosses);
+                }
+                tile.cover();
+            }
+            tile.assignValue(trueValue);
+            if (totalExpectedLosses < lowestLosses) {
+                lowestLosses = totalExpectedLosses;
+            }
+        }
+        return lowestLosses;
     }
 
 }
