@@ -4406,12 +4406,83 @@ public class Main {
         return test;
     }
 
+    public static void minmaxtest(int paircount) {
+        List<MinMaxPair> minmaxpairs = new ArrayList<MinMaxPair>();
+        for (int i = 2; i <= paircount; i++) {
+            minmaxpairs.add(new MinMaxPair(1,ThreadLocalRandom.current().nextInt(2, 7)));
+        }
+        int sum = 2*paircount;
+        System.out.println(minmaxpairs.toString() + "," + sum);
+        //long start1 = System.nanoTime();
+        //System.out.println(Combinatorics.fastSubsetSum(minmaxpairs,sum).size());
+        long end1 = System.nanoTime();
+        //System.out.println((end1 - start1)/10000000);
+        System.out.println(Combinatorics.numSubsetSum(minmaxpairs,sum));
+        System.out.println(Math.log10(Combinatorics.numSubsetSum(minmaxpairs,sum)));
+        long end2 = System.nanoTime();
+        System.out.println((end2 - end1)/10000000);
+    }
+
+    public static void fromReddit2() {
+        Board test = new Board(5,5,12);
+        test.assignTile(2,3);
+        test.assignTile(3,3);
+        test.assignTile(10,3);
+        test.assignTile(13,3);
+        test.assignTile(16,3);
+        test.assignTile(17,3);
+        test.assignTile(18,4);
+        test.assignTile(20,1);
+        test.assignTile(21,2);
+        test.markBomb(5);
+        try {
+            test.makeBestMove();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void fromReddit3() {
+        Board test = new Board(8,2,6);
+        test.markBomb(1);
+        test.assignTile(2,3);
+        test.markBomb(3);
+        test.assignTile(4,2);
+        test.assignTile(5,1);
+        test.assignTile(6,2);
+        test.markBomb(7);
+        try {
+            test.makeBestMove();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     public static void main(String[] args)  {
+
         BoardGui  gui = new BoardGui();
         gui.view();
+        //fromReddit3();
 
+        //BoardTemplate test = new BoardTemplate(200,200,8000);
+        //test.autoSolve(10);
 
+        /*
+        Board test = randomBoard(20,20,60,100,2);
+        try {
+            test.findProbabilities();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.println(test.toString());
+        try {
+            test.findBombSeparatedProbabilities();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.println(test.toString());
+        */
         /*
         long start = System.nanoTime();
       Board test = randomAccurateBoard(30,16,100,80);
