@@ -532,7 +532,7 @@ public class Board {
         }
 
         //System.out.println("Search done!");
-        System.out.println(minmaxpairs + ", " + remainingBombs);
+        //System.out.println(minmaxpairs + ", " + remainingBombs);
         List<List<Integer>> allcombinations = Combinatorics.fastSubsetSum(minmaxpairs,remainingBombs);
         int numcombinations = allcombinations.size();
         for (List<Integer> assignment : allcombinations) {
@@ -867,6 +867,10 @@ public class Board {
             if (totalExpectedLosses < lowestLosses) {
                 lowestLosses = totalExpectedLosses;
                 bestTile = tile;
+                if (lowestLosses == 1) {
+                    System.out.println(String.format("%d: %f", bestTile.getPosn(),  1 - lowestLosses * 1.0 / trueTotalSolutions));
+                    return;
+                }
             }
         }
         System.out.println(String.format("%d: %f", bestTile.getPosn(),  1 - lowestLosses * 1.0 / trueTotalSolutions));
@@ -875,7 +879,7 @@ public class Board {
         try {
             this.findProbabilities();
         } catch (Exception e) {
-            e.printStackTrace();
+            return 0;
         }
         int trueTotalSolutions = totalSolutions.intValue();
         //TODO: Make totalSolutions include the trivial numbersets, because
@@ -933,6 +937,7 @@ public class Board {
         }
 
         for (Tile tile : nonDetermined) {
+            System.out.println(maxLosses);
             int totalExpectedLosses = (int)Math.round(totalSolutions.intValue() * probabilities.get(tile));
             int pos = tile.getPosn();
             int trueValue = tile.getValue();
@@ -943,16 +948,18 @@ public class Board {
                 tile.assignValue(num);
                 tile.clear();
                 if (isValid()) {
-                    totalExpectedLosses += this.expectedLosses(maxLosses, totalExpectedLosses);
+                    totalExpectedLosses += this.expectedLosses(lowestLosses, totalExpectedLosses);
                 }
                 tile.cover();
             }
             tile.assignValue(trueValue);
             if (totalExpectedLosses < lowestLosses) {
                 lowestLosses = totalExpectedLosses;
+                if (lowestLosses == 1) {
+                    return 1;
+                }
             }
         }
         return lowestLosses;
     }
-
 }

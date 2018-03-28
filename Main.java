@@ -4458,12 +4458,21 @@ public class Main {
         }
     }
 
+    public static void fourbyfour() {
+        Board test = new Board(5,5,2);
+        try {
+            test.makeBestMove();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     public static void main(String[] args)  {
 
         BoardGui  gui = new BoardGui();
         gui.view();
-        //fromReddit3();
+        //fourbyfour();
 
         //BoardTemplate test = new BoardTemplate(200,200,8000);
         //test.autoSolve(10);
