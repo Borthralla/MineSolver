@@ -450,6 +450,22 @@ public class Board {
         return result.toString();
     }
 
+    public String valueString() {
+        StringBuilder result = new StringBuilder();
+        for (Tile t : tiles.values()) {
+            if (t.isBomb()) {
+                result.append("x");
+            }
+            else {
+                result.append(t.getValue());
+            }
+            if (t.getPosn() % width == width - 1) {
+                result.append("\n");
+            }
+        }
+        return result.toString();
+    }
+
     public List<TileSet> tileSets() {
         ArrayList<TileSet> result = new ArrayList<TileSet>();
 
@@ -868,11 +884,13 @@ public class Board {
                 lowestLosses = totalExpectedLosses;
                 bestTile = tile;
                 if (lowestLosses == 1) {
+                    reveal(bestTile.getPosn());
                     System.out.println(String.format("%d: %f", bestTile.getPosn(),  1 - lowestLosses * 1.0 / trueTotalSolutions));
                     return;
                 }
             }
         }
+        reveal(bestTile.getPosn());
         System.out.println(String.format("%d: %f", bestTile.getPosn(),  1 - lowestLosses * 1.0 / trueTotalSolutions));
     }
     public int expectedLosses(int maxLosses, int totalLosses) {
@@ -882,7 +900,6 @@ public class Board {
             return 0;
         }
         int trueTotalSolutions = totalSolutions.intValue();
-        //TODO: Make totalSolutions include the trivial numbersets, because
         // they cannot be treated separately in this algorithm.
         //First: get the list of non-determined tiles or find a safe tile
         Boolean hasNonDetermined = false;
@@ -933,12 +950,13 @@ public class Board {
                 }
                 tile.cover();
             }
+            tile.assignValue(trueValue);
             return totalExpectedLosses;
         }
 
         for (Tile tile : nonDetermined) {
             System.out.println(maxLosses);
-            int totalExpectedLosses = (int)Math.round(totalSolutions.intValue() * probabilities.get(tile));
+            int totalExpectedLosses = (int)Math.round(trueTotalSolutions * probabilities.get(tile));
             int pos = tile.getPosn();
             int trueValue = tile.getValue();
             for (int num = 0; num <= radius(pos, t -> t.isCovered()).size(); num++) {
