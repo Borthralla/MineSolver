@@ -80,6 +80,8 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
     boolean shiftDown = false;
     long timeOfLastSearch = 0;
     boolean ctrlDown = false;
+    boolean leftMouseDown = false;
+    boolean rightMouseDown = false;
     public BoardPanel (BoardTemplate boardtemplate) {
         this.boardTemplate = boardtemplate;
         setPreferredSize(new Dimension(30*33 - 10,16*33));
@@ -194,9 +196,27 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
                 g.drawImage(this.bomb, x, y, x + tileSize, y + tileSize, 0, 0, 48, 48, null);
                 return;
             }
+
+            else if (leftMouseDown) {
+                //This is where we make the cool mouse-down effects.
+                Point mouse = getMousePosition();
+                int position = tileIndex(mouse.x, mouse.y);
+                //If we're currently depressing this tile, and it's covered, then we should always draw a 0-tile.
+                //If we're chording (hence rightmousedown as well) then depress any tile adjacent to the one we're
+                //chording (again, by drawing the 0-tile).
+                if (t.getPosn() == position || (rightMouseDown && getBoard().adjacentPositions(position, t.getPosn()))) {
+                    g.drawImage(this.zero, x, y, x + tileSize, y + tileSize, 0, 0, 200, 200, null);
+                }
+                //If the mouse was down but it's not next to the tile we're depressing, draw it normally.
+                else {
+                    g.drawImage(this.covered, x, y, x + tileSize, y + tileSize, 0, 0, 200, 200, null);
+                }
+            }
+            //This is the case where it's a vanilla tile and no mouse-thingies are going on.
             else {
                 g.drawImage(this.covered, x, y, x + tileSize, y + tileSize, 0, 0, 200, 200, null);
             }
+            //Drawing the actual colors.
             if (boardTemplate.showProbabilities) {
                 g.setColor(tileColor(t));
                 g.fillRect(x, y, tileSize, tileSize);
@@ -235,15 +255,13 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
     public void drawNumericProbability() {
         Point mouse = getMousePosition();
-        if (mouse == null) {
+        if (mouse == null || !inBounds(mouse.x, mouse.y)) {
             return;
         }
         int column = (int)(mouse.getX() / tileSize);
         int row = (int)(mouse.getY() / tileSize);
         int posn = row * getBoard().width + column;
-        if (posn < 0 || posn >= getBoard().width * getBoard().height) {
-            return;
-        }
+
         Tile t = getBoard().tiles.get(posn);
         double probability = t.probability;
         Graphics g = this.getGraphics();
@@ -257,15 +275,11 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
     public void drawNumericProbability(Graphics g) {
         Point mouse = getMousePosition();
-        if (mouse == null) {
+        if (mouse == null || !inBounds(mouse.x, mouse.y)) {
             return;
         }
-        int column = (int)(mouse.getX() / tileSize);
-        int row = (int)(mouse.getY() / tileSize);
-        int posn = row * getBoard().width + column;
-        if (posn < 0 || posn >= getBoard().width * getBoard().height) {
-            return;
-        }
+        int posn = tileIndex(mouse.x, mouse.y);
+
         Tile t = getBoard().tiles.get(posn);
         double probability = t.probability;
         g.setColor(new Color(255,255,0, 127));
@@ -276,11 +290,17 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
     }
 
-    public int tileIndex(MouseEvent e) {
-        int column = e.getX() / tileSize;
-        int row = e.getY() / tileSize;
+    public int tileIndex(int x, int y) {
+        int column = x / tileSize;
+        int row = y / tileSize;
         int posn = row * getBoard().width + column;
         return posn;
+    }
+
+    public boolean inBounds(int x, int y) {
+        int maxWidth = getBoard().width * tileSize;
+        int maxHeight = getBoard().height * tileSize;
+        return 0 <= x && x < maxWidth && 0 <= y && y < maxHeight;
     }
 
     @Override
@@ -291,17 +311,63 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
     @Override
     public void mousePressed(MouseEvent e) {
         this.requestFocus();
+        if (!inBounds(e.getX(), e.getY())) {
+            return;
+        }
+
+
+        if (SwingUtilities.isLeftMouseButton(e)) {
+            leftMouseDown = true;
+            //Tile is only cleared once the mouse is released. No Model change.
+        }
 
         if (SwingUtilities.isRightMouseButton(e)) {
-            boardTemplate.onRightClick(tileIndex(e));
+            rightMouseDown = true;
+            //If both left and right mouse down, then it's just a graphical effect so no model change
+            if (!leftMouseDown) {
+                boardTemplate.onRightClick(tileIndex(e.getX(), e.getY()));
+            }
         }
         repaint();
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
+        if (!inBounds(e.getX(), e.getY())) {
+            return;
+        }
+        boolean left = SwingUtilities.isLeftMouseButton(e);
+        boolean right = SwingUtilities.isRightMouseButton(e);
+        //For whatever reason, if even though we're in the mouseReleased method, an event will register as
+        //being left or right even if it's really mousedown and not released.
+        //So the first case is where one is down and one is up. Simultaneous release isn't really possible (LOL).
+        if (left && right) {
+            //If one is being released and another is down, we're chording this tile.
+            boardTemplate.onChord(tileIndex(e.getX(), e.getY()));
+            repaint();
+            //If we decide not to chord, then we don't want undoing the chord in a bad order make the tile clear.
+            //That's why we release the left/right mouse even if its technically still down.
+            rightMouseDown = false;
+            leftMouseDown = false;
+            return;
+        }
+        if (SwingUtilities.isRightMouseButton(e)) {
+            rightMouseDown = false;
+            //If just the right mouse is released, nothing happens since flagging is on mouse-down
+
+        }
         if (SwingUtilities.isLeftMouseButton(e)) {
-            boardTemplate.onClick(tileIndex(e));
+            //It's possible that the mouse is released coming out of a chord. In that case, it will have been
+            //Released automatically. We can see that by checking if it's actually down.
+            if (!leftMouseDown) {
+                return;
+            }
+            leftMouseDown = false;
+
+            //Since we're not chording, just reveal the tile.
+
+            boardTemplate.onClick(tileIndex(e.getX(), e.getY()));
+
             repaint();
         }
     }

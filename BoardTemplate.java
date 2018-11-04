@@ -73,31 +73,52 @@ public class BoardTemplate {
         currentCustomNumber = num;
     }
 
-    public void onClick(int posn) {
-        if (this.mode == Mode.PLAY && firstclick) {
-            board.assignRandomValuesWithZero(posn);
-            this.firstclick = false;
-            this.gameStarted = true;
-            this.startTime = Instant.now();
+    public void onChord(int posn) {
+        if (this.mode != Mode.PLAY) {
+            return;
         }
+        Tile toChord = getBoard().tiles.get(posn);
+        if (toChord.isNumber() && getBoard().radius(posn,tile -> tile.isFlagged || tile.isMarked).size() == toChord.getValue()) {
+            chordTile(posn);
+            calculateProbabilities();
+            checkGameDone();
+        }
+    }
+
+    public void calculateProbabilities() {
+        try {
+            board.findBombSeparatedProbabilities();
+        } catch (Exception e) {
+            board.reset();
+        }
+    }
+
+    public void checkGameDone() {
+        if (board.isDone() && !gameFinished) {
+            gameFinished = true;
+            endTime = Instant.now();
+        }
+    }
+
+    public void onClick(int posn) {
         if (this.mode == Mode.PLAY) {
-            if (board.tiles.get(posn).isNumber()) {
-                chordTile(posn);
+            if ( firstclick) {
+                board.assignRandomValuesWithZero(posn);
+                this.firstclick = false;
+                this.gameStarted = true;
+                this.startTime = Instant.now();
+            }
+            Tile tile = board.tiles.get(posn);
+            if (tile.isNumber() || tile.isFlagged || tile.isMarked) {
+                return;
             }
             else {
                 board.reveal(posn);
             }
             if (showProbabilities) {
-                try {
-                    board.findBombSeparatedProbabilities();
-                } catch (Exception e) {
-                    board.reset();
-                }
+                calculateProbabilities();
             }
-            if (board.isDone() && !gameFinished) {
-                gameFinished = true;
-                endTime = Instant.now();
-            }
+            checkGameDone();
         }
         if (this.mode == Mode.CUSTOM) {
             boolean wasNumber = board.tiles.get(posn).isNumber();
@@ -180,17 +201,10 @@ public class BoardTemplate {
         //Function returns true if the board changed.
         //The board will not change only when the game is finished.
         if (board.revealLowest()) {
-            try {
-                board.findBombSeparatedProbabilities();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+           calculateProbabilities();
         }
         else {
-            if (!gameFinished) {
-                gameFinished = true;
-                endTime = Instant.now();
-            }
+            checkGameDone();
         }
     }
 

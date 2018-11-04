@@ -270,7 +270,7 @@ public class Board {
 
     public void reveal(int posn) {
         Tile toClear = tiles.get(posn);
-        if (toClear.isFlagged || toClear.isMarked) {
+        if (toClear.isFlagged || toClear.isMarked || toClear.isNumber()) {
             return;
         }
         if (toClear.isCovered()) {
@@ -300,6 +300,14 @@ public class Board {
 
     public int playerBombsLeft() {
         return totalbombs - numFlags - bombsHit;
+    }
+
+    public boolean adjacentPositions(int pos1, int pos2) {
+        int x1 = pos1 % width;
+        int x2 = pos2 % width;
+        int y1 = pos1 / width;
+        int y2 = pos2 / width;
+        return Math.abs(x1 - x2) <= 1 && Math.abs(y1 - y2) <= 1;
     }
 
 
@@ -685,7 +693,6 @@ public class Board {
     }
 
     public void findBombSeparatedProbabilities() throws Exception {
-        System.out.println("Calculating...");
         //System.out.println("Search started...");
         this.totalSolutions = BigInteger.ZERO;
         resetNumbers();
