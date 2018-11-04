@@ -17,6 +17,7 @@ public class Board {
     BigInteger totalSolutions;
     double expectedBombs;
     int bombsHit;
+    int numFlags;
 
     public Board(int width, int height, int totalbombs) {
         this.expectedBombs = 0;
@@ -27,6 +28,7 @@ public class Board {
         this.remainingBombs = totalbombs;
         this.totalSolutions = BigInteger.ZERO;
         this.tiles = new HashMap<Integer, Tile>();
+        this.numFlags = 0;
 
         for (int i = 0; i < width * height; i++) {
             tiles.put(i, new Tile(i));
@@ -64,15 +66,21 @@ public class Board {
 
     public void flagTile(int position) {
         Tile toFlag = tiles.get(position);
-        if (!toFlag.isNumber()) {
-            boolean isFlagged = toFlag.isFlagged;
-            toFlag.isFlagged = !isFlagged;
+        if (!toFlag.isNumber() && !toFlag.isMarked) {
+            if (toFlag.isFlagged) {
+                numFlags--;
+                toFlag.isFlagged = false;
+            }
+            else {
+                numFlags++;
+                toFlag.isFlagged = true;
+            }
         }
     }
 
     public void chordTile(int position) {
         Tile toChord = tiles.get(position);
-        if (toChord.isNumber() && radius(position,tile -> tile.isFlagged).size() == toChord.getValue()) {
+        if (toChord.isNumber() && radius(position,tile -> tile.isFlagged || tile.isMarked).size() == toChord.getValue()) {
             for (Tile c : radius(position, tile -> tile.isCovered())) {
                 reveal(c.getPosn());
             }
@@ -240,6 +248,9 @@ public class Board {
 
     public void slowReveal(int posn) {
         Tile toClear = tiles.get(posn);
+        if (toClear.isFlagged || toClear.isMarked) {
+            return;
+        }
         if (toClear.isCovered()) {
             expectedBombs = expectedBombs + toClear.probability;
         }
@@ -259,6 +270,9 @@ public class Board {
 
     public void reveal(int posn) {
         Tile toClear = tiles.get(posn);
+        if (toClear.isFlagged || toClear.isMarked) {
+            return;
+        }
         if (toClear.isCovered()) {
             expectedBombs = expectedBombs + toClear.probability;
         }
@@ -273,7 +287,7 @@ public class Board {
             toDo.add(posn);
             while (!toDo.isEmpty()) {
                 int toReveal = toDo.pop();
-                for (Tile t : radius(toReveal, tile -> tile.isCovered())) {
+                for (Tile t : radius(toReveal, tile -> tile.isCovered() && !tile.isFlagged)) {
                     t.probability = 0;
                     clearTile(t.getPosn());
                     if (t.getValue() == 0) {
@@ -282,6 +296,10 @@ public class Board {
                 }
             }
         }
+    }
+
+    public int playerBombsLeft() {
+        return totalbombs - numFlags - bombsHit;
     }
 
 
@@ -667,6 +685,7 @@ public class Board {
     }
 
     public void findBombSeparatedProbabilities() throws Exception {
+        System.out.println("Calculating...");
         //System.out.println("Search started...");
         this.totalSolutions = BigInteger.ZERO;
         resetNumbers();
@@ -884,15 +903,19 @@ public class Board {
                 lowestLosses = totalExpectedLosses;
                 bestTile = tile;
                 if (lowestLosses == 1) {
-                    reveal(bestTile.getPosn());
                     System.out.println(String.format("%d: %f", bestTile.getPosn(),  1 - lowestLosses * 1.0 / trueTotalSolutions));
+                    reveal(bestTile.getPosn());
                     return;
                 }
             }
         }
-        reveal(bestTile.getPosn());
         System.out.println(String.format("%d: %f", bestTile.getPosn(),  1 - lowestLosses * 1.0 / trueTotalSolutions));
+        reveal(bestTile.getPosn());
+
     }
+
+    //maxLosses is the current number of losses that you need to beat. If you go over, then quit this branch,
+    //totalLosses is the total accumulated losses in this branch.
     public int expectedLosses(int maxLosses, int totalLosses) {
         try {
             this.findProbabilities();
@@ -936,7 +959,7 @@ public class Board {
         int lowestLosses = maxLosses - totalLosses;
         if (hasSafe) {
             Tile tile = safeTile;
-            int totalExpectedLosses = (int)Math.round(trueTotalSolutions * probabilities.get(tile));
+            int totalExpectedLosses = (int)Math.round(trueTotalSolutions * probabilities.get(tile)); //Will be 0
             int pos = tile.getPosn();
             int trueValue = tile.getValue();
             for (int num = 0; num <= radius(pos, t -> t.isCovered()).size(); num++) {
@@ -946,7 +969,7 @@ public class Board {
                 tile.assignValue(num);
                 tile.clear();
                 if (isValid()) {
-                    totalExpectedLosses += this.expectedLosses(maxLosses, totalExpectedLosses);
+                    totalExpectedLosses += this.expectedLosses(lowestLosses, totalExpectedLosses);
                 }
                 tile.cover();
             }
@@ -955,7 +978,7 @@ public class Board {
         }
 
         for (Tile tile : nonDetermined) {
-            System.out.println(maxLosses);
+            //System.out.println(maxLosses);
             int totalExpectedLosses = (int)Math.round(trueTotalSolutions * probabilities.get(tile));
             int pos = tile.getPosn();
             int trueValue = tile.getValue();

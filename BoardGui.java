@@ -79,6 +79,7 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
     ColorGradient gradient;
     boolean shiftDown = false;
     long timeOfLastSearch = 0;
+    boolean ctrlDown = false;
     public BoardPanel (BoardTemplate boardtemplate) {
         this.boardTemplate = boardtemplate;
         setPreferredSize(new Dimension(30*33 - 10,16*33));
@@ -118,6 +119,14 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         drawTiles(g);
+        if (boardTemplate.showProbabilities) {
+            if (!shiftDown) {
+                drawNumericProbability(g);
+            }
+            if (ctrlDown) {
+                showProbabilities(g);
+            }
+        }
     }
 
     public void showProbabilities(Graphics g) {
@@ -226,13 +235,40 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
 
     public void drawNumericProbability() {
         Point mouse = getMousePosition();
+        if (mouse == null) {
+            return;
+        }
         int column = (int)(mouse.getX() / tileSize);
         int row = (int)(mouse.getY() / tileSize);
         int posn = row * getBoard().width + column;
+        if (posn < 0 || posn >= getBoard().width * getBoard().height) {
+            return;
+        }
         Tile t = getBoard().tiles.get(posn);
         double probability = t.probability;
         Graphics g = this.getGraphics();
         g.setColor(new Color(255,255,0));
+        g.fillRect((int)mouse.getX() + 20, (int)mouse.getY() - 10, 135/16 * Double.toString(probability).length(), 30);
+
+        g.setColor(Color.black);
+        g.drawString(Double.toString(probability), (int)mouse.getX() + 25, (int)mouse.getY() + 10);
+
+    }
+
+    public void drawNumericProbability(Graphics g) {
+        Point mouse = getMousePosition();
+        if (mouse == null) {
+            return;
+        }
+        int column = (int)(mouse.getX() / tileSize);
+        int row = (int)(mouse.getY() / tileSize);
+        int posn = row * getBoard().width + column;
+        if (posn < 0 || posn >= getBoard().width * getBoard().height) {
+            return;
+        }
+        Tile t = getBoard().tiles.get(posn);
+        double probability = t.probability;
+        g.setColor(new Color(255,255,0, 127));
         g.fillRect((int)mouse.getX() + 20, (int)mouse.getY() - 10, 135/16 * Double.toString(probability).length(), 30);
 
         g.setColor(Color.black);
@@ -330,23 +366,25 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
             timeOfLastSearch = System.nanoTime();
         }
         if (!shiftDown && e.getKeyCode() == KeyEvent.VK_SHIFT ) {
-            shiftDown = true;
-            drawNumericProbability();
+            //shiftDown = true;
+            //drawNumericProbability();
         }
 
         if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
-            showProbabilities(this.getGraphics());
+            //ctrlDown = true;
+            //showProbabilities(this.getGraphics());
         }
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
+            this.ctrlDown = !ctrlDown;
             this.repaint();
         }
         if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+            this.shiftDown = !shiftDown;
             this.repaint();
-            shiftDown = false;
         }
     }
 }
@@ -377,6 +415,7 @@ class SettingsPanel extends JPanel implements ActionListener {
     BoardPanel boardPanel;
     JRadioButton play;
     JRadioButton custom;
+    Timer timer=new Timer(7, this);
 
     public SettingsPanel(BoardTemplate template, BoardPanel boardPanel) {
         this.template = template;
@@ -411,6 +450,7 @@ class SettingsPanel extends JPanel implements ActionListener {
         this.add(new JLabel("Mode:"));
         this.add(play);
         this.add(custom);
+        timer.start();
 
     }
 
@@ -418,31 +458,64 @@ class SettingsPanel extends JPanel implements ActionListener {
     public void actionPerformed(ActionEvent e) {
 
         try {
-            if (e.getActionCommand().equals("Reset")) {
-                int width = Integer.parseInt(this.width.getText());
-                int height = Integer.parseInt(this.height.getText());
-                int totalBombs = Integer.parseInt(this.totalbombs.getText());
-                template.resetBoard(width, height, totalBombs);
-                boardPanel.setTileSize();
-                boardPanel.repaint();
-                boardPanel.requestFocus();
+            if (e.getActionCommand() == null) {
+                if(e.getSource()==this.timer){
+                    this.repaint();
+                    boardPanel.repaint();
+                }
             }
-            if (e.getActionCommand().equals("Toggle Show Probabilities")) {
-                template.toggleShowProbabilities();
-                boardPanel.requestFocus();
-                boardPanel.repaint();
-            }
-            if (e.getActionCommand().equals("toggle mode")) {
-                System.out.print("mode switch registered");
-                template.switchMode();
-                boardPanel.requestFocus();
-                boardPanel.repaint();
+            else {
+                if (e.getActionCommand().equals("Reset")) {
+                    int width = Integer.parseInt(this.width.getText());
+                    int height = Integer.parseInt(this.height.getText());
+                    int totalBombs = Integer.parseInt(this.totalbombs.getText());
+                    template.resetBoard(width, height, totalBombs);
+                    boardPanel.setTileSize();
+                    boardPanel.repaint();
+                    boardPanel.requestFocus();
+                }
+                if (e.getActionCommand().equals("Toggle Show Probabilities")) {
+                    template.toggleShowProbabilities();
+                    boardPanel.requestFocus();
+                    boardPanel.repaint();
+                }
+                if (e.getActionCommand().equals("toggle mode")) {
+                    System.out.print("mode switch registered");
+                    template.switchMode();
+                    boardPanel.requestFocus();
+                    boardPanel.repaint();
+                }
             }
         }
         catch(Exception exception) {
+            System.out.println(exception.getMessage());
             return;
         }
-
-
     }
+
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        drawDuration(g);
+        drawNumBombsLeft(g);
+    }
+
+    public void drawDuration(Graphics g) {
+        Dimension dimension = this.getSize();
+        int width = dimension.width;
+        int height = dimension.height;
+        int duration = template.gameDuration();
+        g.setFont(new Font("Arial", Font.BOLD, 14));
+        g.drawString(Integer.toString(duration),  50, height - 12);
+    }
+
+    public void drawNumBombsLeft(Graphics g) {
+        Dimension dimension = this.getSize();
+        int width = dimension.width;
+        int height = dimension.height;
+        int numBombsLeft = template.numBombsLeft();
+        g.setFont(new Font("Arial", Font.BOLD, 14));
+        g.drawString("Bombs: " + Integer.toString(numBombsLeft),  width - 100, height - 12);
+    }
+
+
 }

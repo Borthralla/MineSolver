@@ -4459,7 +4459,30 @@ public class Main {
     }
 
     public static void fourbyfour() {
-        Board test = new Board(5,5,2);
+        Board test = new Board(4,4,12);
+        try {
+            test.makeBestMove();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void online() {
+        Board test = new Board(4,7,10);
+        test.assignTile(0, 1);
+        test.assignTile(4, 3);
+        test.assignTile(12, 2);
+        test.assignTile(16, 0);
+        test.assignTile(20, 0);
+        test.assignTile(24, 0);
+        test.assignTile(13, 2);
+        test.assignTile(17, 1);
+        test.assignTile(21, 2);
+        test.assignTile(25, 2);
+        test.assignTile(10, 4);
+        test.assignTile(14, 2);
+        test.assignTile(18, 2); //Goteem!
+        test.markBomb(27);
         try {
             test.makeBestMove();
         } catch (Exception e) {
@@ -4472,6 +4495,7 @@ public class Main {
 
         BoardGui  gui = new BoardGui();
         gui.view();
+        //online();
         //fourbyfour();
 
         //BoardTemplate test = new BoardTemplate(200,200,8000);

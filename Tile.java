@@ -109,7 +109,9 @@ public class Tile {
      * Clears the tile, but does not assign a value. Useful for calculating probability.
      */
     public void clear() {
-        this.iscleared = true;
+        if (!this.isFlagged) {
+            this.iscleared = true;
+        }
     }
 
     /**
