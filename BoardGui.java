@@ -425,6 +425,9 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
             boardTemplate.resetBoard();
             repaint();
         }
+        if (e.getKeyCode() == KeyEvent.VK_S) {
+            boardTemplate.toggleStart();
+        }
 
         if (e.getKeyCode() == KeyEvent.VK_ENTER && System.nanoTime() - timeOfLastSearch > 12500000) {
             boardTemplate.onEnter();

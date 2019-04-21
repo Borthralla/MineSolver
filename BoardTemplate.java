@@ -1,5 +1,6 @@
 package Minesweeper;
 
+import java.math.BigInteger;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -16,6 +17,7 @@ public class BoardTemplate {
     Instant startTime;
     boolean gameFinished;
     Instant endTime;
+    boolean startZero = true;
 
     public BoardTemplate() {
         this.board = new Board(30,16,99);
@@ -103,7 +105,12 @@ public class BoardTemplate {
     public void onClick(int posn) {
         if (this.mode == Mode.PLAY) {
             if ( firstclick) {
-                board.assignRandomValuesWithZero(posn);
+                if (this.startZero) {
+                    board.assignRandomValuesWithZero(posn);
+                }
+                else {
+                    board.assignRandomValuesWithClear(posn);
+                }
                 this.firstclick = false;
                 this.gameStarted = true;
                 this.startTime = Instant.now();
@@ -152,6 +159,10 @@ public class BoardTemplate {
         }
     }
 
+    public void toggleStart() {
+        this.startZero = !this.startZero;
+    }
+
     public void onRightClick(int posn) {
         if (this.mode == Mode.PLAY) {
             board.flagTile(posn);
@@ -177,7 +188,7 @@ public class BoardTemplate {
 
     public void onEnter() {
         if (!firstclick && mode == Mode.PLAY && showProbabilities) {
-           revealLowest();
+            revealLowest();
         }
         else {
             if(this.mode == Mode.PLAY) {
@@ -206,6 +217,16 @@ public class BoardTemplate {
         else {
             checkGameDone();
         }
+    }
+
+    public void revealLowestNonDetermined() {
+        if (board.revealLowestNonDetermined()) {
+            calculateProbabilities();
+        }
+        else {
+            checkGameDone();
+        }
+
     }
 
     public void autoSolve(int numTrials) {
