@@ -1,16 +1,9 @@
 package Minesweeper;
 
-import javafx.util.converter.BigIntegerStringConverter;
-
-import java.io.File;
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Predicate;
 
-public class Main {
+public class test {
     public static Board test1() {
         Board result = new Board(10,10,10);
         result.assignTile(5,0);
@@ -4491,7 +4484,7 @@ public class Main {
     }
 
 
-    public static void main(String[] args)  {
+    public static void test_stuff(String[] args)  {
 
         BoardGui  gui = new BoardGui();
         gui.view();

@@ -341,7 +341,7 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
         //For whatever reason, if even though we're in the mouseReleased method, an event will register as
         //being left or right even if it's really mousedown and not released.
         //So the first case is where one is down and one is up. Simultaneous release isn't really possible (LOL).
-        if (left && right) {
+        if (left && rightMouseDown || right && leftMouseDown) {
             //If one is being released and another is down, we're chording this tile.
             boardTemplate.onChord(tileIndex(e.getX(), e.getY()));
             repaint();
