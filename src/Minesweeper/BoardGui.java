@@ -201,10 +201,11 @@ class BoardPanel extends JPanel implements MouseListener, KeyListener {
                 //This is where we make the cool mouse-down effects.
                 Point mouse = getMousePosition();
                 int position = tileIndex(mouse.x, mouse.y);
+                Tile mouseTile = getBoard().tiles.get(position);
                 //If we're currently depressing this tile, and it's covered, then we should always draw a 0-tile.
                 //If we're chording (hence rightmousedown as well) then depress any tile adjacent to the one we're
                 //chording (again, by drawing the 0-tile).
-                if (t.getPosn() == position || (rightMouseDown && getBoard().adjacentPositions(position, t.getPosn()))) {
+                if (t.getPosn() == position || (mouseTile.isNumber()  && (getBoard().adjacentPositions(position, t.getPosn())))) {
                     g.drawImage(this.zero, x, y, x + tileSize, y + tileSize, 0, 0, 200, 200, null);
                 }
                 //If the mouse was down but it's not next to the tile we're depressing, draw it normally.

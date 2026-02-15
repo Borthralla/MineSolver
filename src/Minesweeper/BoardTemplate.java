@@ -116,7 +116,10 @@ public class BoardTemplate {
                 this.startTime = Instant.now();
             }
             Tile tile = board.tiles.get(posn);
-            if (tile.isNumber() || tile.isFlagged || tile.isMarked) {
+            if (tile.isNumber()) {
+                chordTile(posn);
+            }
+            if (tile.isFlagged || tile.isMarked) {
                 return;
             }
             else {
